@@ -98,28 +98,54 @@ const InsightsView: React.FC = () => {
     const startDate = getStartDate();
     const periodDays = getPeriodDays();
     const periodCompletions = allCompletions.filter(c => c.date >= startDate);
+    const today = getTodayString();
 
     const insights: TaskInsight[] = tasks.map(task => {
       const taskCompletions = periodCompletions.filter(c => c.taskId === task.id);
-      const completionRate = (taskCompletions.length / periodDays) * 100;
-      const avgCompletionsPerWeek = (taskCompletions.length / periodDays) * 7;
+      
+      // Calculate days since task was created (within the selected period)
+      const taskCreatedDate = task.createdAt ? task.createdAt.split('T')[0] : startDate;
+      const effectiveStartDate = taskCreatedDate > startDate ? taskCreatedDate : startDate;
+      
+      // Calculate actual days the task has existed in this period
+      const createdDateObj = new Date(effectiveStartDate);
+      const todayDateObj = new Date(today);
+      const daysSinceCreation = Math.max(1, Math.floor((todayDateObj.getTime() - createdDateObj.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      
+      // Use the smaller of periodDays or daysSinceCreation for fair calculation
+      const effectiveDays = Math.min(periodDays, daysSinceCreation);
+      
+      const completionRate = (taskCompletions.length / effectiveDays) * 100;
+      const avgCompletionsPerWeek = (taskCompletions.length / effectiveDays) * 7;
 
       // Calculate trend (compare first half vs second half)
-      const midPoint = startDate;
-      const midDate = new Date(midPoint);
-      midDate.setDate(midDate.getDate() + Math.floor(periodDays / 2));
-      const midDateStr = getTodayString(midDate);
-
-      const firstHalf = taskCompletions.filter(c => c.date < midDateStr).length;
-      const secondHalf = taskCompletions.filter(c => c.date >= midDateStr).length;
-      
+      // Only calculate trend if task has existed for at least 4 days
       let trend: 'improving' | 'stable' | 'declining' = 'stable';
-      if (secondHalf > firstHalf * 1.2) trend = 'improving';
-      else if (secondHalf < firstHalf * 0.8) trend = 'declining';
+      let firstHalf = 0;
+      let secondHalf = 0;
+      
+      if (effectiveDays >= 4) {
+        const midDate = new Date(effectiveStartDate);
+        midDate.setDate(midDate.getDate() + Math.floor(effectiveDays / 2));
+        const midDateStr = getTodayString(midDate);
+
+        firstHalf = taskCompletions.filter(c => c.date < midDateStr).length;
+        secondHalf = taskCompletions.filter(c => c.date >= midDateStr).length;
+        
+        if (secondHalf > firstHalf * 1.2) trend = 'improving';
+        else if (secondHalf < firstHalf * 0.8) trend = 'declining';
+      }
 
       // Generate prediction
       let prediction = '';
-      if (trend === 'improving') {
+      if (effectiveDays < 2) {
+        // For newly created tasks
+        if (taskCompletions.length > 0) {
+          prediction = 'Great start! Keep it going to build consistency.';
+        } else {
+          prediction = 'Just added! Complete it today to start your streak.';
+        }
+      } else if (trend === 'improving') {
         prediction = `Keep up the momentum! You are ${Math.round(((secondHalf - firstHalf) / (firstHalf || 1)) * 100)}% better than before.`;
       } else if (trend === 'declining') {
         prediction = `Needs attention. Performance dropped ${Math.round(((firstHalf - secondHalf) / (firstHalf || 1)) * 100)}% recently.`;
