@@ -23,10 +23,10 @@ import {
 import { importFromICalendar, filterPersonalEvents } from './icalParser';
 
 interface EventsViewProps {
-  onNavigate: (view: string) => void;
+  onNavigate?: (view: string) => void;
 }
 
-const EventsView: React.FC<EventsViewProps> = ({ onNavigate }) => {
+const EventsView: React.FC<EventsViewProps> = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<Array<{ event: Event; date: string; daysUntil: number }>>([]);
   const [isEditing, setIsEditing] = useState(false);
