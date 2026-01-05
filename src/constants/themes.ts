@@ -40,6 +40,30 @@ export interface Theme {
  */
 export const themes: Theme[] = [
   {
+    id: 'routine-ruby',
+    name: 'Routine Ruby',
+    emoji: '🐦',
+    description: 'Elegant muted ruby - inspired by hummingbirds',
+    colors: {
+      primary: '#8B3A3A',
+      secondary: '#6B2C2C',
+      accent: '#A94A4A',
+      background: '#f9fafb',
+      text: '#1f2937',
+      textLight: '#6b7280',
+      cardBg: 'rgba(255, 255, 255, 0.95)',
+      cardBorder: '#e5e7eb',
+      success: '#10b981',
+      warning: '#f59e0b',
+      danger: '#8B3A3A',
+    },
+    gradient: {
+      from: '#8B3A3A',
+      via: '#7A3333',
+      to: '#6B2C2C',
+    },
+  },
+  {
     id: 'purple-dream',
     name: 'Purple Dream',
     emoji: '💜',
@@ -151,7 +175,7 @@ export const themes: Theme[] = [
       cardBorder: '#fbcfe8',
       success: '#10b981',
       warning: '#f59e0b',
-      danger: '#e11d48',
+      danger: '#dc2626',
     },
     gradient: {
       from: '#ec4899',
@@ -292,5 +316,5 @@ export const getThemeById = (id: string): Theme => {
 /**
  * Default theme ID
  */
-export const DEFAULT_THEME_ID = 'purple-dream';
+export const DEFAULT_THEME_ID = 'mint-fresh';
 

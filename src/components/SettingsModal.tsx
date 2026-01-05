@@ -50,8 +50,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ show, onClose }) => {
       await setEmail(editingEmail);
       await saveUserSettings({ dashboardLayout });
       onClose();
-      // Reload page to apply layout changes
-      window.location.reload();
+      // Note: Layout and theme changes apply immediately via context
+      // No reload needed - preserves navigation state
     } catch (error) {
       console.error('Error saving settings:', error);
       alert('Failed to save settings. Please try again.');

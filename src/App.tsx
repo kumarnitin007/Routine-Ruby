@@ -17,16 +17,13 @@ import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import TodayView from './TodayView';
-import ConfigureView from './ConfigureView';
-import HistoryView from './HistoryView';
-import MonthlyView from './MonthlyView';
+import TasksView from './TasksView';
 import EventsView from './EventsView';
 import JournalView from './JournalView';
-import RoutinesView from './RoutinesView';
-import TagsManager from './TagsManager';
-import InsightsView from './InsightsView';
-import IntegrationsView from './IntegrationsView';
+import AnalyticsView from './AnalyticsView';
+import SettingsView from './SettingsView';
 import TimerView from './TimerView';
+import FloatingTimerButton from './components/FloatingTimerButton';
 import AboutModal from './components/AboutModal';
 import SettingsModal from './components/SettingsModal';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
@@ -35,7 +32,7 @@ import AuthModal from './components/AuthModal';
 import { isFirstTimeUser, markOnboardingComplete } from './storage';
 import { loadSampleTasks } from './utils/sampleData';
 
-type View = 'today' | 'configure' | 'history' | 'monthly' | 'events' | 'journal' | 'routines' | 'tags' | 'insights' | 'integrations' | 'timer';
+type View = 'today' | 'tasks' | 'events' | 'journal' | 'analytics' | 'settings';
 
 /**
  * Main App Content Component
@@ -48,6 +45,7 @@ const AppContent: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(isFirstTimeUser());
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showTimerModal, setShowTimerModal] = useState(false);
   
   const { theme } = useTheme();
   const { avatar, username } = useUser();
@@ -124,26 +122,16 @@ const AppContent: React.FC = () => {
     switch (currentView) {
       case 'today':
         return <TodayView key={`today-${key}`} onNavigate={handleNavigate} />;
-      case 'configure':
-        return <ConfigureView key={`configure-${key}`} />;
-      case 'history':
-        return <HistoryView key={`history-${key}`} />;
-      case 'monthly':
-        return <MonthlyView key={`monthly-${key}`} />;
+      case 'tasks':
+        return <TasksView key={`tasks-${key}`} />;
       case 'events':
         return <EventsView key={`events-${key}`} onNavigate={handleNavigate} />;
       case 'journal':
         return <JournalView key={`journal-${key}`} />;
-      case 'routines':
-        return <RoutinesView key={`routines-${key}`} />;
-      case 'tags':
-        return <TagsManager key={`tags-${key}`} onClose={() => setCurrentView('configure')} />;
-      case 'insights':
-        return <InsightsView key={`insights-${key}`} />;
-      case 'integrations':
-        return <IntegrationsView key={`integrations-${key}`} />;
-      case 'timer':
-        return <TimerView key={`timer-${key}`} />;
+      case 'analytics':
+        return <AnalyticsView key={`analytics-${key}`} />;
+      case 'settings':
+        return <SettingsView key={`settings-${key}`} />;
       default:
         return <TodayView key={`today-${key}`} onNavigate={handleNavigate} />;
     }
@@ -182,20 +170,20 @@ const AppContent: React.FC = () => {
           <button
             className={`nav-button ${currentView === 'today' ? 'active' : ''}`}
             onClick={() => handleNavigate('today')}
-            title="Today's Tasks"
+            title="Today's Dashboard"
             style={currentView === 'today' ? { backgroundColor: theme.colors.primary } : {}}
           >
-            <span className="nav-icon">🎯</span>
+            <span className="nav-icon">🏠</span>
             <span className="nav-text">Today</span>
           </button>
           <button
-            className={`nav-button ${currentView === 'monthly' ? 'active' : ''}`}
-            onClick={() => handleNavigate('monthly')}
-            title="Monthly Calendar View"
-            style={currentView === 'monthly' ? { backgroundColor: theme.colors.primary } : {}}
+            className={`nav-button ${currentView === 'tasks' ? 'active' : ''}`}
+            onClick={() => handleNavigate('tasks')}
+            title="Tasks & Routines"
+            style={currentView === 'tasks' ? { backgroundColor: theme.colors.primary } : {}}
           >
-            <span className="nav-icon">🗓️</span>
-            <span className="nav-text">Monthly</span>
+            <span className="nav-icon">🎯</span>
+            <span className="nav-text">Tasks</span>
           </button>
           <button
             className={`nav-button ${currentView === 'events' ? 'active' : ''}`}
@@ -203,35 +191,8 @@ const AppContent: React.FC = () => {
             title="Birthdays, Anniversaries & Special Occasions"
             style={currentView === 'events' ? { backgroundColor: theme.colors.primary } : {}}
           >
-            <span className="nav-icon">🎉</span>
+            <span className="nav-icon">📅</span>
             <span className="nav-text">Events</span>
-          </button>
-          <button
-            className={`nav-button ${currentView === 'configure' ? 'active' : ''}`}
-            onClick={() => handleNavigate('configure')}
-            title="Add & Manage Tasks"
-            style={currentView === 'configure' ? { backgroundColor: theme.colors.primary } : {}}
-          >
-            <span className="nav-icon">➕</span>
-            <span className="nav-text">Task</span>
-          </button>
-          <button
-            className={`nav-button ${currentView === 'history' ? 'active' : ''}`}
-            onClick={() => handleNavigate('history')}
-            title="Progress & Statistics"
-            style={currentView === 'history' ? { backgroundColor: theme.colors.primary } : {}}
-          >
-            <span className="nav-icon">📈</span>
-            <span className="nav-text">History</span>
-          </button>
-          <button
-            className={`nav-button ${currentView === 'timer' ? 'active' : ''}`}
-            onClick={() => handleNavigate('timer')}
-            title="Focus Timer & Countdown"
-            style={currentView === 'timer' ? { backgroundColor: theme.colors.primary } : {}}
-          >
-            <span className="nav-icon">⏱️</span>
-            <span className="nav-text">Timer</span>
           </button>
           <button
             className={`nav-button ${currentView === 'journal' ? 'active' : ''}`}
@@ -243,49 +204,25 @@ const AppContent: React.FC = () => {
             <span className="nav-text">Journal</span>
           </button>
           <button
-            className={`nav-button ${currentView === 'routines' ? 'active' : ''}`}
-            onClick={() => handleNavigate('routines')}
-            title="Task Routines & Templates"
-            style={currentView === 'routines' ? { backgroundColor: theme.colors.primary } : {}}
+            className={`nav-button ${currentView === 'analytics' ? 'active' : ''}`}
+            onClick={() => handleNavigate('analytics')}
+            title="Analytics & Reports"
+            style={currentView === 'analytics' ? { backgroundColor: theme.colors.primary } : {}}
           >
-            <span className="nav-icon">🎯</span>
-            <span className="nav-text">Routines</span>
+            <span className="nav-icon">📊</span>
+            <span className="nav-text">Analytics</span>
           </button>
           <button
-            className={`nav-button ${currentView === 'insights' ? 'active' : ''}`}
-            onClick={() => handleNavigate('insights')}
-            title="Insights & Analytics"
-            style={currentView === 'insights' ? { backgroundColor: theme.colors.primary } : {}}
+            className={`nav-button ${currentView === 'settings' ? 'active' : ''}`}
+            onClick={() => handleNavigate('settings')}
+            title="Settings & Configuration"
+            style={currentView === 'settings' ? { backgroundColor: theme.colors.primary } : {}}
           >
-            <span className="nav-icon">💡</span>
-            <span className="nav-text">Insights</span>
+            <span className="nav-icon">⚙️</span>
+            <span className="nav-text">Settings</span>
           </button>
         </nav>
         <div className="header-actions">
-          <button
-            className="icon-button"
-            onClick={() => handleNavigate('integrations')}
-            title="Integrations Hub"
-            style={{ color: theme.colors.primary }}
-          >
-            🔌
-          </button>
-          <button
-            className="icon-button"
-            onClick={() => handleNavigate('tags')}
-            title="Manage Tags"
-            style={{ color: theme.colors.primary }}
-          >
-            🏷️
-          </button>
-          <button
-            className="icon-button"
-            onClick={() => setShowSettings(true)}
-            title="Settings"
-            style={{ color: theme.colors.primary }}
-          >
-            ⚙️
-          </button>
           <button
             className="icon-button"
             onClick={() => setShowAbout(true)}
@@ -345,6 +282,19 @@ const AppContent: React.FC = () => {
       {/* Onboarding Flow */}
       {showOnboarding && (
         <OnboardingFlow onComplete={handleOnboardingComplete} />
+      )}
+
+      {/* Floating Timer Button */}
+      <FloatingTimerButton onClick={() => setShowTimerModal(true)} />
+
+      {/* Timer Modal */}
+      {showTimerModal && (
+        <div className="modal-overlay active" onClick={() => setShowTimerModal(false)}>
+          <div className="modal timer-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowTimerModal(false)}>×</button>
+            <TimerView key={`timer-${key}`} />
+          </div>
+        </div>
       )}
     </div>
   );
