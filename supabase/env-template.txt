@@ -1,0 +1,15 @@
+# Supabase Configuration
+# Copy these lines to a .env file in the root directory
+# Get these values from: https://supabase.com/dashboard/project/_/settings/api
+
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Instructions:
+# 1. Create a file named .env in the root directory (C:\APPS\MyDay\.env)
+# 2. Copy the two lines above
+# 3. Replace the values with your actual Supabase project URL and anon key
+# 4. Save the file
+# 5. Restart your development server (npm run dev)
+
+
