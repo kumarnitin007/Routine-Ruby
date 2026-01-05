@@ -412,6 +412,7 @@ export const getRoutines = async (): Promise<Routine[]> => {
     taskIds: routine.task_ids || [],
     timeOfDay: routine.time_of_day,
     isPreDefined: routine.is_pre_defined || false,
+    isActive: routine.is_active !== false, // Default to true for backward compatibility
     createdAt: routine.created_at || new Date().toISOString()
   }));
 };
@@ -427,7 +428,9 @@ export const saveRoutine = async (routine: Routine): Promise<void> => {
       name: routine.name,
       description: routine.description,
       task_ids: routine.taskIds,
-      time_of_day: routine.timeOfDay
+      time_of_day: routine.timeOfDay,
+      is_pre_defined: routine.isPreDefined || false,
+      is_active: routine.isActive !== false
     }], {
       onConflict: 'id'
     });
@@ -456,8 +459,103 @@ export const updateRoutine = async (routineId: string, updates: Partial<Routine>
 };
 
 export const initializeDefaultRoutines = async (): Promise<void> => {
-  // Default routines initialization not supported in Supabase mode
-  console.log('Default routines initialization not supported. Please create routines manually.');
+  try {
+    const userId = await ensureAuthenticated();
+    
+    // Check if sample routines already exist
+    const { data: existingRoutines, error: checkError } = await supabase
+      .from('myday_routines')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('is_pre_defined', true);
+
+    if (checkError) throw checkError;
+    
+    // If sample routines already exist, don't create duplicates
+    if (existingRoutines && existingRoutines.length > 0) {
+      return;
+    }
+
+    // Create sample routines (inactive by default)
+    const sampleRoutines = [
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: '🌅 Morning Energizer',
+        description: 'Start your day with energy and focus',
+        time_of_day: 'morning',
+        task_ids: [],
+        is_pre_defined: true,
+        is_active: false,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: '🌙 Evening Wind Down',
+        description: 'Relax and prepare for restful sleep',
+        time_of_day: 'evening',
+        task_ids: [],
+        is_pre_defined: true,
+        is_active: false,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: '💪 Workout Session',
+        description: 'Complete workout and fitness routine',
+        time_of_day: 'anytime',
+        task_ids: [],
+        is_pre_defined: true,
+        is_active: false,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: '🧘 Mindfulness Break',
+        description: 'Meditation, breathing, and mental reset',
+        time_of_day: 'anytime',
+        task_ids: [],
+        is_pre_defined: true,
+        is_active: false,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: '📚 Study Session',
+        description: 'Focused learning and skill development',
+        time_of_day: 'afternoon',
+        task_ids: [],
+        is_pre_defined: true,
+        is_active: false,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: '🏠 Home Reset',
+        description: 'Quick cleaning and organization routine',
+        time_of_day: 'anytime',
+        task_ids: [],
+        is_pre_defined: true,
+        is_active: false,
+        created_at: new Date().toISOString()
+      }
+    ];
+
+    const { error: insertError } = await supabase
+      .from('myday_routines')
+      .insert(sampleRoutines);
+
+    if (insertError) throw insertError;
+    
+    console.log('✅ Sample routines initialized successfully');
+  } catch (error) {
+    console.error('Error initializing sample routines:', error);
+  }
 };
 
 // ===== TAGS =====

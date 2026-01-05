@@ -101,6 +101,7 @@ const RoutinesView: React.FC<RoutinesViewProps> = ({ onApplyRoutine }) => {
           timeOfDay: formData.timeOfDay,
           taskIds: formData.selectedTaskIds,
           isPreDefined: false,
+          isActive: true, // User-created routines are active by default
           createdAt: new Date().toISOString()
         };
         await addRoutine(newRoutine);
@@ -124,6 +125,26 @@ const RoutinesView: React.FC<RoutinesViewProps> = ({ onApplyRoutine }) => {
         console.error('Error deleting routine:', error);
         alert('Error deleting routine. Please try again.');
       }
+    }
+  };
+
+  const handleActivate = async (routine: Routine) => {
+    try {
+      await updateRoutine(routine.id, { isActive: true });
+      await loadData();
+    } catch (error) {
+      console.error('Error activating routine:', error);
+      alert('Error activating routine. Please try again.');
+    }
+  };
+
+  const handleDeactivate = async (routine: Routine) => {
+    try {
+      await updateRoutine(routine.id, { isActive: false });
+      await loadData();
+    } catch (error) {
+      console.error('Error deactivating routine:', error);
+      alert('Error deactivating routine. Please try again.');
     }
   };
 
@@ -159,8 +180,11 @@ const RoutinesView: React.FC<RoutinesViewProps> = ({ onApplyRoutine }) => {
     return icons[timeOfDay as keyof typeof icons] || '⏰';
   };
 
-  const preDefinedRoutines = routines.filter(r => r.isPreDefined);
-  const userRoutines = routines.filter(r => !r.isPreDefined);
+  const activeRoutines = routines.filter(r => r.isActive && !r.isPreDefined);
+  const userRoutines = routines.filter(r => !r.isPreDefined && r.isActive);
+  const sampleRoutines = routines.filter(r => r.isPreDefined);
+  const activeSampleRoutines = sampleRoutines.filter(r => r.isActive);
+  const inactiveSampleRoutines = sampleRoutines.filter(r => !r.isActive);
 
   return (
     <div className="routines-view">
@@ -254,39 +278,74 @@ const RoutinesView: React.FC<RoutinesViewProps> = ({ onApplyRoutine }) => {
         </div>
       )}
 
-      {/* Pre-defined Routines */}
-      <div className="routines-section">
-        <h3>📋 Pre-defined Templates</h3>
-        <div className="routines-grid">
-          {preDefinedRoutines.map(routine => (
-            <div key={routine.id} className="routine-card">
-              <div className="routine-header">
-                <span className="routine-icon">{getTimeIcon(routine.timeOfDay)}</span>
-                <h4>{routine.name}</h4>
+      {/* Active Sample Routines */}
+      {activeSampleRoutines.length > 0 && (
+        <div className="routines-section">
+          <h3>📋 Active Sample Routines</h3>
+          <div className="routines-grid">
+            {activeSampleRoutines.map(routine => (
+              <div key={routine.id} className="routine-card routine-active">
+                <div className="routine-header">
+                  <span className="routine-icon">{getTimeIcon(routine.timeOfDay)}</span>
+                  <h4>{routine.name}</h4>
+                </div>
+                {routine.description && (
+                  <p className="routine-description">{routine.description}</p>
+                )}
+                <div className="routine-meta">
+                  <span className="routine-time">{routine.timeOfDay}</span>
+                  <span className="routine-tasks">{routine.taskIds.length} task(s)</span>
+                </div>
+                <div className="routine-actions">
+                  <button onClick={() => handleEdit(routine)} className="btn-edit">
+                    ⚙️ Configure
+                  </button>
+                  <button 
+                    onClick={() => handleApply(routine)} 
+                    className="btn-apply"
+                    disabled={routine.taskIds.length === 0}
+                  >
+                    ⚡ Apply
+                  </button>
+                  <button onClick={() => handleDeactivate(routine)} className="btn-secondary" title="Deactivate this routine">
+                    ⏸️ Deactivate
+                  </button>
+                </div>
               </div>
-              {routine.description && (
-                <p className="routine-description">{routine.description}</p>
-              )}
-              <div className="routine-meta">
-                <span className="routine-time">{routine.timeOfDay}</span>
-                <span className="routine-tasks">{routine.taskIds.length} task(s)</span>
-              </div>
-              <div className="routine-actions">
-                <button onClick={() => handleEdit(routine)} className="btn-edit">
-                  ⚙️ Configure
-                </button>
-                <button 
-                  onClick={() => handleApply(routine)} 
-                  className="btn-apply"
-                  disabled={routine.taskIds.length === 0}
-                >
-                  ⚡ Apply
-                </button>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Inactive Sample Routines (Templates) */}
+      {inactiveSampleRoutines.length > 0 && (
+        <div className="routines-section">
+          <h3>💡 Available Sample Routines</h3>
+          <p className="section-description">Activate these pre-built routines to start using them</p>
+          <div className="routines-grid">
+            {inactiveSampleRoutines.map(routine => (
+              <div key={routine.id} className="routine-card routine-inactive">
+                <div className="routine-header">
+                  <span className="routine-icon">{getTimeIcon(routine.timeOfDay)}</span>
+                  <h4>{routine.name}</h4>
+                </div>
+                {routine.description && (
+                  <p className="routine-description">{routine.description}</p>
+                )}
+                <div className="routine-meta">
+                  <span className="routine-time">{routine.timeOfDay}</span>
+                  <span className="routine-badge">Sample Template</span>
+                </div>
+                <div className="routine-actions">
+                  <button onClick={() => handleActivate(routine)} className="btn-primary">
+                    ✅ Activate
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* User-created Routines */}
       {userRoutines.length > 0 && (

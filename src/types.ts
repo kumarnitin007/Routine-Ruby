@@ -101,6 +101,7 @@ export interface Routine {
   timeOfDay: 'morning' | 'afternoon' | 'evening' | 'anytime';
   taskIds: string[]; // References to tasks
   isPreDefined: boolean; // true for system templates, false for user-created
+  isActive: boolean; // true = active and usable, false = inactive/template
   createdAt: string;
 }
 
