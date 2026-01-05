@@ -573,7 +573,7 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
 
   const handleTimerComplete = async (durationMinutes: number) => {
     if (timerTask) {
-      await completeTask(timerTask.id, today, durationMinutes, new Date().toISOString());
+      await completeTask(timerTask.id, today, durationMinutes);
       
       // Check for dependent tasks
       if (appData) {
@@ -622,19 +622,9 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
     if (task.frequency !== 'count-based' || !task.frequencyCount || !task.frequencyPeriod) {
       return null;
     }
-    const todayDate = new Date();
-    let bounds;
-    if (task.frequencyPeriod === 'week') {
-      bounds = getWeekBounds(todayDate);
-    } else {
-      bounds = getMonthBounds(todayDate);
-    }
-    const completionCount = getCompletionCountForPeriod(task.id, bounds.start, bounds.end);
-    return {
-      current: completionCount,
-      target: task.frequencyCount,
-      label: `${completionCount} of ${task.frequencyCount}`
-    };
+    // TODO: Load completion count asynchronously
+    // For now, return null to avoid sync/async issues
+    return null;
   };
 
 

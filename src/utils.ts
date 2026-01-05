@@ -7,8 +7,8 @@ export const formatDate = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-export const getTodayString = (): string => {
-  return formatDate(new Date());
+export const getTodayString = (date?: Date): string => {
+  return formatDate(date || new Date());
 };
 
 export const shouldTaskShowToday = (task: Task): boolean => {

@@ -36,46 +36,58 @@ const HabitTrackingGrid: React.FC<HabitTrackingGridProps> = ({ daysToShow = 365 
   const [showTaskSelector, setShowTaskSelector] = useState(false);
 
   useEffect(() => {
-    loadTasks();
+    const init = async () => {
+      await loadTasks();
+    };
+    init();
   }, []);
 
   useEffect(() => {
-    if (selectedTaskIds.length > 0) {
-      calculateGridData();
-    }
+    const calc = async () => {
+      if (selectedTaskIds.length > 0) {
+        await calculateGridData();
+      }
+    };
+    calc();
   }, [selectedTaskIds, daysToShow]);
 
-  const loadTasks = () => {
-    const allTasks = getTasks();
-    setTasks(allTasks);
-    
-    // Auto-select all tasks by default
-    if (allTasks.length > 0) {
-      setSelectedTaskIds(allTasks.map(t => t.id));
+  const loadTasks = async () => {
+    try {
+      const allTasks = await getTasks();
+      setTasks(allTasks);
+      
+      // Auto-select all tasks by default
+      if (allTasks.length > 0) {
+        setSelectedTaskIds(allTasks.map(t => t.id));
+      }
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+      setTasks([]);
     }
   };
 
-  const calculateGridData = () => {
-    const completions = getTaskHistory();
-    const today = getTodayString();
-    const data: DayData[] = [];
+  const calculateGridData = async () => {
+    try {
+      const completions = await getTaskHistory();
+      const today = getTodayString();
+      const data: DayData[] = [];
 
-    // Group completions by date and task
-    const completionsByDate = new Map<string, Set<string>>();
-    completions.forEach(c => {
-      if (selectedTaskIds.includes(c.taskId)) {
-        if (!completionsByDate.has(c.completedAt)) {
-          completionsByDate.set(c.completedAt, new Set());
+      // Group completions by date and task
+      const completionsByDate = new Map<string, Set<string>>();
+      completions.forEach(c => {
+        if (selectedTaskIds.includes(c.taskId)) {
+          if (!completionsByDate.has(c.date)) {
+            completionsByDate.set(c.date, new Set());
+          }
+          completionsByDate.get(c.date)!.add(c.taskId);
         }
-        completionsByDate.get(c.completedAt)!.add(c.taskId);
-      }
-    });
+      });
 
-    // Generate data for each day
-    for (let i = daysToShow - 1; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = getTodayString(date);
+      // Generate data for each day
+      for (let i = daysToShow - 1; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = getTodayString(date);
       
       const completedTaskIds = completionsByDate.get(dateStr) || new Set();
       const completedCount = completedTaskIds.size;
@@ -92,7 +104,11 @@ const HabitTrackingGrid: React.FC<HabitTrackingGridProps> = ({ daysToShow = 365 
       });
     }
 
-    setGridData(data);
+      setGridData(data);
+    } catch (error) {
+      console.error('Error calculating grid data:', error);
+      setGridData([]);
+    }
   };
 
   const getColorIntensity = (completionRate: number): string => {

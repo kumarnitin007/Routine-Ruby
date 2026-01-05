@@ -32,7 +32,7 @@ import SettingsModal from './components/SettingsModal';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import OnboardingFlow from './components/OnboardingFlow';
 import AuthModal from './components/AuthModal';
-import { isFirstTimeUser, markOnboardingComplete, saveData, loadData } from './storage';
+import { isFirstTimeUser, markOnboardingComplete } from './storage';
 import { loadSampleTasks } from './utils/sampleData';
 
 type View = 'today' | 'configure' | 'history' | 'monthly' | 'events' | 'journal' | 'routines' | 'tags' | 'insights' | 'integrations' | 'timer';

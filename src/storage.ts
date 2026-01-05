@@ -670,9 +670,9 @@ export const moveTaskToNextDay = async (taskId: string, fromDate: string, toDate
   console.log('Move to next day not yet implemented');
 };
 
-export const getCompletionCountForPeriod = async (startDate: string, endDate: string): Promise<number> => {
+export const getCompletionCountForPeriod = async (taskId: string, startDate: string, endDate: string): Promise<number> => {
   const completions = await getCompletions();
-  return completions.filter(c => c.date >= startDate && c.date <= endDate).length;
+  return completions.filter(c => c.taskId === taskId && c.date >= startDate && c.date <= endDate).length;
 };
 
 export const saveTaskOrder = (taskIds: string[]): void => {

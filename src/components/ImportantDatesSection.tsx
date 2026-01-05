@@ -8,20 +8,23 @@
 import React, { useState } from 'react';
 import { Event } from '../types';
 
-interface DashboardEvent {
-  event: Event;
+interface DashboardItem {
+  type: 'task' | 'event';
+  task?: any;
+  event?: Event;
   id: string;
   name: string;
   description?: string;
   category?: string;
   isCompleted: boolean;
+  weightage: number;
   color?: string;
   daysUntil?: number;
 }
 
 interface ImportantDatesSectionProps {
-  events: DashboardEvent[];
-  onEventClick: (event: DashboardEvent) => void;
+  events: DashboardItem[];
+  onEventClick: (event: DashboardItem) => void;
   collapsed?: boolean;
 }
 

@@ -274,9 +274,9 @@ const getFrequencyLabel = (task: Task, weeklyFrequency: number): string => {
 /**
  * Apply a recommendation to a task
  */
-export const applyRecommendation = (taskId: string, recommendation: Recommendation): boolean => {
+export const applyRecommendation = async (taskId: string, recommendation: Recommendation): Promise<boolean> => {
   try {
-    const data = loadData();
+    const data = await loadData();
     const taskIndex = data.tasks.findIndex(t => t.id === taskId);
     
     if (taskIndex === -1) {
