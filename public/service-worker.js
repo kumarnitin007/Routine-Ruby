@@ -30,37 +30,56 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return response
-        if (response) {
+  // Check if we're in development (localhost)
+  const isDevelopment = event.request.url.includes('localhost') || event.request.url.includes('127.0.0.1');
+  
+  if (isDevelopment) {
+    // NETWORK-FIRST strategy for development
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Always use fresh content in development
           return response;
-        }
-
-        return fetch(event.request).then(
-          (response) => {
-            // Check if we received a valid response
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Clone the response
-            const responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-
+        })
+        .catch(() => {
+          // Only use cache as fallback when offline
+          return caches.match(event.request);
+        })
+    );
+  } else {
+    // CACHE-FIRST strategy for production
+    event.respondWith(
+      caches.match(event.request)
+        .then((response) => {
+          // Cache hit - return response
+          if (response) {
             return response;
           }
-        ).catch(() => {
-          // Return a custom offline page if available
-          return caches.match('/offline.html');
-        });
-      })
-  );
+
+          return fetch(event.request).then(
+            (response) => {
+              // Check if we received a valid response
+              if (!response || response.status !== 200 || response.type !== 'basic') {
+                return response;
+              }
+
+              // Clone the response
+              const responseToCache = response.clone();
+
+              caches.open(CACHE_NAME)
+                .then((cache) => {
+                  cache.put(event.request, responseToCache);
+                });
+
+              return response;
+            }
+          ).catch(() => {
+            // Return a custom offline page if available
+            return caches.match('/offline.html');
+          });
+        })
+    );
+  }
 });
 
 // Activate event - clean up old caches

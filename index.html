@@ -26,12 +26,16 @@
     <script type="module" src="/src/main.tsx"></script>
     
     <!-- Service Worker Registration -->
+    <!-- Note: Service Worker uses network-first strategy in development (localhost) -->
+    <!-- To completely disable Service Worker during dev, comment out this script block -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/service-worker.js')
             .then((registration) => {
-              console.log('Service Worker registered successfully:', registration.scope);
+              console.log('✅ Service Worker registered successfully:', registration.scope);
+              console.log('💡 Dev Mode: Using network-first strategy for hot reload');
+              console.log('🔧 To unregister SW: Run in console: navigator.serviceWorker.getRegistrations().then(r => r.forEach(reg => reg.unregister()))');
             })
             .catch((error) => {
               console.log('Service Worker registration failed:', error);
