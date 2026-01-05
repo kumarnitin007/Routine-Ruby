@@ -5,7 +5,7 @@ import { formatDate, shouldTaskShowToday, getWeekBounds, getMonthBounds } from '
 import DayDetailsModal from './components/DayDetailsModal';
 
 interface MonthlyViewProps {
-  onNavigate: (view: string) => void;
+  onNavigate?: (view: string) => void;
   onBackToDashboard?: () => void;
 }
 

@@ -460,10 +460,10 @@ export const updateRoutine = async (routineId: string, updates: Partial<Routine>
 
 export const initializeDefaultRoutines = async (): Promise<void> => {
   try {
-    const userId = await ensureAuthenticated();
+    const { client, userId } = await requireAuth();
     
     // Check if sample routines already exist
-    const { data: existingRoutines, error: checkError } = await supabase
+    const { data: existingRoutines, error: checkError } = await client
       .from('myday_routines')
       .select('id')
       .eq('user_id', userId)
@@ -546,7 +546,7 @@ export const initializeDefaultRoutines = async (): Promise<void> => {
       }
     ];
 
-    const { error: insertError } = await supabase
+    const { error: insertError } = await client
       .from('myday_routines')
       .insert(sampleRoutines);
 

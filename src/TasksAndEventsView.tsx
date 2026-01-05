@@ -11,12 +11,12 @@ import EventsView from './EventsView';
 import RoutinesView from './RoutinesView';
 
 interface TasksAndEventsViewProps {
-  onNavigate: (view: string) => void;
+  onNavigate?: (view: string) => void;
 }
 
 type SubTab = 'tasks' | 'events' | 'routines';
 
-const TasksAndEventsView: React.FC<TasksAndEventsViewProps> = ({ onNavigate }) => {
+const TasksAndEventsView: React.FC<TasksAndEventsViewProps> = () => {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('tasks');
 
   return (
@@ -127,9 +127,9 @@ const TasksAndEventsView: React.FC<TasksAndEventsViewProps> = ({ onNavigate }) =
 
       {/* Content Area */}
       <div className="sub-tab-content">
-        {activeSubTab === 'tasks' && <ConfigureView onNavigate={onNavigate} />}
-        {activeSubTab === 'events' && <EventsView onNavigate={onNavigate} />}
-        {activeSubTab === 'routines' && <RoutinesView onNavigate={onNavigate} />}
+        {activeSubTab === 'tasks' && <ConfigureView />}
+        {activeSubTab === 'events' && <EventsView />}
+        {activeSubTab === 'routines' && <RoutinesView />}
       </div>
     </div>
   );
