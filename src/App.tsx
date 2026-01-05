@@ -170,11 +170,11 @@ const AppContent: React.FC = () => {
           <button
             className={`nav-button ${currentView === 'today' ? 'active' : ''}`}
             onClick={() => handleNavigate('today')}
-            title="Today's Dashboard"
+            title="Dashboard View"
             style={currentView === 'today' ? { backgroundColor: theme.colors.primary } : {}}
           >
             <span className="nav-icon">🏠</span>
-            <span className="nav-text">Today</span>
+            <span className="nav-text">Dashboard</span>
           </button>
           <button
             className={`nav-button ${currentView === 'tasks' ? 'active' : ''}`}

@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Task, TaskCompletion, Event } from './types';
-import { loadData } from './storage';
+import { loadData, completeTask, isTaskCompletedToday } from './storage';
 import { formatDate, shouldTaskShowToday, getWeekBounds, getMonthBounds } from './utils';
+import DayDetailsModal from './components/DayDetailsModal';
 
-const MonthlyView: React.FC = () => {
+interface MonthlyViewProps {
+  onNavigate: (view: string) => void;
+}
+
+const MonthlyView: React.FC<MonthlyViewProps> = ({ onNavigate }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [completions, setCompletions] = useState<TaskCompletion[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadMonthData();
@@ -226,6 +233,8 @@ const MonthlyView: React.FC = () => {
               <div
                 key={index}
                 className={`calendar-day ${!isCurrentMonth(day) ? 'other-month' : ''} ${isToday(day) ? 'today' : ''}`}
+                onClick={() => setSelectedDate(formatDate(day))}
+                style={{ cursor: 'pointer' }}
               >
                 <div className="day-number">{monthAbbr} {day.getDate()}</div>
                 
@@ -285,6 +294,22 @@ const MonthlyView: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* Day Details Modal */}
+      {selectedDate && (
+        <DayDetailsModal
+          date={selectedDate}
+          tasks={getTasksForDate(new Date(selectedDate + 'T00:00:00'))}
+          events={events}
+          completedTaskIds={completedTaskIds}
+          onClose={() => setSelectedDate(null)}
+          onCompleteTask={async (taskId) => {
+            await completeTask(taskId, selectedDate);
+            setCompletedTaskIds(prev => new Set(prev).add(taskId));
+            await loadMonthData();
+          }}
+        />
+      )}
     </div>
   );
 };

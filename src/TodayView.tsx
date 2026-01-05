@@ -24,6 +24,7 @@ import LayoutSelector from './components/LayoutSelector';
 import { DashboardLayout } from './types';
 import { getDashboardLayout, setDashboardLayout, bulkHoldTasks, bulkUnholdTasks } from './storage';
 import { useAuth } from './contexts/AuthContext';
+import MonthlyView from './MonthlyView';
 
 type DashboardItem = {
   type: 'task' | 'event';
@@ -45,6 +46,7 @@ interface TodayViewProps {
 
 const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
   const { user, loading: authLoading } = useAuth();
+  const [viewMode, setViewMode] = useState<'dashboard' | 'monthly'>('dashboard');
   const [items, setItems] = useState<DashboardItem[]>([]);
   const [events, setEvents] = useState<DashboardItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<DashboardItem | null>(null);
@@ -733,6 +735,11 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
     );
   }
 
+  // If monthly view is selected, show MonthlyView component
+  if (viewMode === 'monthly') {
+    return <MonthlyView onNavigate={onNavigate} />;
+  }
+
   return (
     <div className="today-view">
       <div className="date-header">
@@ -742,6 +749,19 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
             <p>{formatDateLong()}</p>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {/* View Toggle */}
+            <button
+              onClick={() => setViewMode(viewMode === 'dashboard' ? 'monthly' : 'dashboard')}
+              className="btn-secondary"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <span>{viewMode === 'dashboard' ? '📅' : '🏠'}</span>
+              <span>{viewMode === 'dashboard' ? 'Monthly View' : 'Dashboard'}</span>
+            </button>
             <button 
               onClick={() => setShowProgressModal(true)}
               className="btn-secondary"
