@@ -15,7 +15,11 @@ import CountdownTimer from './components/CountdownTimer';
 
 type TimerMode = 'select' | 'task-endtime' | 'task-duration' | 'standalone';
 
-const TimerView: React.FC = () => {
+interface TimerViewProps {
+  onClose?: () => void;
+}
+
+const TimerView: React.FC<TimerViewProps> = ({ onClose }) => {
   const [mode, setMode] = useState<TimerMode>('select');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -26,6 +30,36 @@ const TimerView: React.FC = () => {
   useEffect(() => {
     loadTasks();
   }, []);
+
+  // Parse duration from task name (e.g., "Study 30 mins" -> 30, "Yoga 10 minutes" -> 10, "Meeting 1 hour" -> 60)
+  const parseDurationFromTaskName = (taskName: string): { hours: number; minutes: number } => {
+    const name = taskName.toLowerCase();
+    
+    // Match patterns like "30 mins", "30 minutes", "30min", "30m"
+    const minuteMatch = name.match(/(\d+)\s*(min|mins|minute|minutes|m)(?!\w)/);
+    if (minuteMatch) {
+      const mins = parseInt(minuteMatch[1]);
+      return { hours: 0, minutes: mins };
+    }
+    
+    // Match patterns like "1 hour", "2 hours", "1hr", "2hrs", "1h"
+    const hourMatch = name.match(/(\d+)\s*(hour|hours|hr|hrs|h)(?!\w)/);
+    if (hourMatch) {
+      const hrs = parseInt(hourMatch[1]);
+      return { hours: hrs, minutes: 0 };
+    }
+    
+    // Match patterns like "1h 30m", "1 hour 30 minutes"
+    const combinedMatch = name.match(/(\d+)\s*(h|hour|hours|hr|hrs)\s*(\d+)\s*(m|min|mins|minute|minutes)/);
+    if (combinedMatch) {
+      const hrs = parseInt(combinedMatch[1]);
+      const mins = parseInt(combinedMatch[3]);
+      return { hours: hrs, minutes: mins };
+    }
+    
+    // Default to 25 minutes (Pomodoro technique)
+    return { hours: 0, minutes: 25 };
+  };
 
   const loadTasks = async () => {
     try {
@@ -160,8 +194,44 @@ const TimerView: React.FC = () => {
     <div className="timer-view" style={{
       maxWidth: '800px',
       margin: '0 auto',
-      padding: '2rem 1rem'
+      padding: '2rem 1rem',
+      position: 'relative'
     }}>
+      {/* Close button */}
+      {onClose && (
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '1rem',
+            right: '1rem',
+            background: 'rgba(255, 255, 255, 0.2)',
+            border: 'none',
+            borderRadius: '50%',
+            width: '40px',
+            height: '40px',
+            color: 'white',
+            fontSize: '1.5rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
+            e.currentTarget.style.transform = 'scale(1.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
+        >
+          ×
+        </button>
+      )}
+      
       <div className="timer-header" style={{
         textAlign: 'center',
         marginBottom: '2rem'
@@ -432,7 +502,12 @@ const TimerView: React.FC = () => {
                   tasks.map(task => (
                     <div
                       key={task.id}
-                      onClick={() => setSelectedTask(task)}
+                      onClick={() => {
+                        setSelectedTask(task);
+                        // Parse duration from task name and set as default
+                        const parsedDuration = parseDurationFromTaskName(task.name);
+                        setCustomDuration(parsedDuration);
+                      }}
                       style={{
                         background: 'rgba(255, 255, 255, 0.15)',
                         padding: '1rem',

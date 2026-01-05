@@ -291,8 +291,7 @@ const AppContent: React.FC = () => {
       {showTimerModal && (
         <div className="modal-overlay active" onClick={() => setShowTimerModal(false)}>
           <div className="modal timer-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowTimerModal(false)}>×</button>
-            <TimerView key={`timer-${key}`} />
+            <TimerView key={`timer-${key}`} onClose={() => setShowTimerModal(false)} />
           </div>
         </div>
       )}

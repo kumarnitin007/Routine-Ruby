@@ -34,6 +34,9 @@ const EventsView: React.FC<EventsViewProps> = ({ onNavigate }) => {
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterFrequency, setFilterFrequency] = useState<string>('all');
+  const [searchText, setSearchText] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -357,7 +360,7 @@ const EventsView: React.FC<EventsViewProps> = ({ onNavigate }) => {
   return (
     <div className="events-view">
       <div className="events-header">
-        <h2>📅 Important Dates & Occasions</h2>
+        <h2>📅 Events</h2>
         <p>Manage birthdays, anniversaries, holidays, memorials, and other significant dates</p>
       </div>
 
@@ -406,8 +409,9 @@ const EventsView: React.FC<EventsViewProps> = ({ onNavigate }) => {
           className="btn-secondary" 
           onClick={handleFileSelect}
           disabled={isImporting}
+          title="Import from Google Calendar (.ics file)"
         >
-          📤 {isImporting ? importProgress : 'Import from Google Calendar (.ics)'}
+          📤 {isImporting ? importProgress : 'Import Calendar'}
         </button>
         {events.length === 0 && (
           <button className="btn-secondary" onClick={handleImportSample}>
@@ -422,6 +426,113 @@ const EventsView: React.FC<EventsViewProps> = ({ onNavigate }) => {
           onChange={handleFileImport}
         />
       </div>
+
+      {/* Filter Section */}
+      {events.length > 0 && (
+        <div className="events-filters" style={{
+          background: 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '12px',
+          padding: '1rem',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          gap: '1rem',
+          flexWrap: 'wrap',
+          alignItems: 'center'
+        }}>
+          <div style={{ flex: '1 1 200px', minWidth: '150px' }}>
+            <label style={{ fontSize: '0.875rem', color: '#6b7280', display: 'block', marginBottom: '0.25rem' }}>
+              Search
+            </label>
+            <input
+              type="text"
+              placeholder="Search events..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.5rem',
+                borderRadius: '8px',
+                border: '1px solid #d1d5db',
+                fontSize: '0.875rem'
+              }}
+            />
+          </div>
+          
+          <div style={{ flex: '0 1 150px', minWidth: '120px' }}>
+            <label style={{ fontSize: '0.875rem', color: '#6b7280', display: 'block', marginBottom: '0.25rem' }}>
+              Category
+            </label>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.5rem',
+                borderRadius: '8px',
+                border: '1px solid #d1d5db',
+                fontSize: '0.875rem'
+              }}
+            >
+              <option value="all">All Categories</option>
+              <option value="Birthday">Birthday</option>
+              <option value="Anniversary">Anniversary</option>
+              <option value="Wedding">Wedding</option>
+              <option value="Graduation">Graduation</option>
+              <option value="Holiday">Holiday</option>
+              <option value="Festival">Festival</option>
+              <option value="Special Event">Special Event</option>
+              <option value="Death Anniversary">Death Anniversary</option>
+              <option value="Memorial">Memorial</option>
+              <option value="Remembrance">Remembrance</option>
+            </select>
+          </div>
+          
+          <div style={{ flex: '0 1 150px', minWidth: '120px' }}>
+            <label style={{ fontSize: '0.875rem', color: '#6b7280', display: 'block', marginBottom: '0.25rem' }}>
+              Frequency
+            </label>
+            <select
+              value={filterFrequency}
+              onChange={(e) => setFilterFrequency(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.5rem',
+                borderRadius: '8px',
+                border: '1px solid #d1d5db',
+                fontSize: '0.875rem'
+              }}
+            >
+              <option value="all">All Frequencies</option>
+              <option value="yearly">Yearly</option>
+              <option value="monthly">Monthly</option>
+              <option value="one-time">One-time</option>
+            </select>
+          </div>
+          
+          {(searchText || filterCategory !== 'all' || filterFrequency !== 'all') && (
+            <button
+              onClick={() => {
+                setSearchText('');
+                setFilterCategory('all');
+                setFilterFrequency('all');
+              }}
+              style={{
+                padding: '0.5rem 1rem',
+                background: 'transparent',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Add/Edit Form */}
       {isEditing && (
@@ -613,16 +724,37 @@ const EventsView: React.FC<EventsViewProps> = ({ onNavigate }) => {
 
       {/* Events List */}
       <div className="events-list-container">
-        <h3>📋 All Events ({events.length})</h3>
-        {events.length === 0 ? (
-          <div className="no-events">
-            <p>No events yet. Add your first event to get started!</p>
-          </div>
-        ) : (
-          <div className="events-grid">
-            {events
-              .sort((a, b) => {
-                // Sort by date (month-day for yearly, full date for one-time)
+        {(() => {
+          // Apply filters
+          let filteredEvents = events;
+          
+          if (searchText) {
+            filteredEvents = filteredEvents.filter(event =>
+              event.name.toLowerCase().includes(searchText.toLowerCase()) ||
+              (event.description && event.description.toLowerCase().includes(searchText.toLowerCase()))
+            );
+          }
+          
+          if (filterCategory !== 'all') {
+            filteredEvents = filteredEvents.filter(event => event.category === filterCategory);
+          }
+          
+          if (filterFrequency !== 'all') {
+            filteredEvents = filteredEvents.filter(event => event.frequency === filterFrequency);
+          }
+          
+          return (
+            <>
+              <h3>📋 All Events ({filteredEvents.length}{filteredEvents.length !== events.length ? ` of ${events.length}` : ''})</h3>
+              {filteredEvents.length === 0 ? (
+                <div className="no-events">
+                  <p>{events.length === 0 ? 'No events yet. Add your first event to get started!' : 'No events match your filters.'}</p>
+                </div>
+              ) : (
+                <div className="events-grid">
+                  {filteredEvents
+                    .sort((a, b) => {
+                      // Sort by date (month-day for yearly, full date for one-time)
                 if (a.frequency === 'yearly' && b.frequency === 'yearly') {
                   return a.date.localeCompare(b.date);
                 }
@@ -683,8 +815,11 @@ const EventsView: React.FC<EventsViewProps> = ({ onNavigate }) => {
                   </div>
                 </div>
               ))}
-          </div>
-        )}
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
     </div>
   );

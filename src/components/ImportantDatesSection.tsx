@@ -104,7 +104,7 @@ const ImportantDatesSection: React.FC<ImportantDatesSectionProps> = ({
           alignItems: 'center',
           gap: '0.5rem'
         }}>
-          📅 Important Dates ({events.length})
+          📅 Events ({events.length})
         </span>
         <span style={{ 
           fontSize: '1.5rem',
