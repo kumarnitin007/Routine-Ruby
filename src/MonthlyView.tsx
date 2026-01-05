@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Task, TaskCompletion } from './types';
+import { Task, TaskCompletion, Event } from './types';
 import { loadData } from './storage';
 import { formatDate, shouldTaskShowToday, getWeekBounds, getMonthBounds } from './utils';
 
@@ -7,6 +7,7 @@ const MonthlyView: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [completions, setCompletions] = useState<TaskCompletion[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
 
   useEffect(() => {
     loadMonthData();
@@ -17,10 +18,12 @@ const MonthlyView: React.FC = () => {
       const data = await loadData();
       setTasks(data.tasks);
       setCompletions(data.completions);
+      setEvents(data.events);
     } catch (error) {
       console.error('Error loading monthly data:', error);
       setTasks([]);
       setCompletions([]);
+      setEvents([]);
     }
   };
 
@@ -84,6 +87,29 @@ const MonthlyView: React.FC = () => {
   const getCompletionsForDate = (date: Date): TaskCompletion[] => {
     const dateStr = formatDate(date);
     return completions.filter(c => c.date === dateStr);
+  };
+
+  const getEventsForDate = (date: Date): Event[] => {
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const mmdd = `${month}-${day}`;
+    const fullDate = formatDate(date);
+    
+    return events.filter(event => {
+      if (event.hideFromDashboard) return false;
+      
+      // Yearly events (birthdays, anniversaries)
+      if (event.frequency === 'yearly') {
+        return event.date === mmdd;
+      }
+      
+      // One-time events
+      if (event.frequency === 'one-time') {
+        return event.date === fullDate;
+      }
+      
+      return false;
+    });
   };
 
   const getCompletionRate = (date: Date): number => {
@@ -152,6 +178,7 @@ const MonthlyView: React.FC = () => {
         </button>
 
         <div className="calendar-legend">
+          <div style={{ marginBottom: '0.5rem', fontWeight: 600 }}>Task Completion:</div>
           <div className="legend-item">
             <span className="legend-color" style={{ background: '#10b981' }}></span>
             <span>100% Complete</span>
@@ -168,6 +195,16 @@ const MonthlyView: React.FC = () => {
             <span className="legend-color" style={{ background: '#ef4444' }}></span>
             <span>0% Complete</span>
           </div>
+          
+          <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 600 }}>Events:</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.875rem' }}>
+            <span>🎂 Birthday</span>
+            <span>💍 Anniversary</span>
+            <span>🎉 Holiday</span>
+            <span>🎊 Festival</span>
+            <span>🕯️ Memorial</span>
+            <span>📅 Other</span>
+          </div>
         </div>
 
         <div className="calendar-grid">
@@ -181,6 +218,8 @@ const MonthlyView: React.FC = () => {
             const tasksForDay = getTasksForDate(day);
             const completionRate = getCompletionRate(day);
             const hasAnyTasks = tasksForDay.length > 0;
+            const eventsForDay = getEventsForDate(day);
+            const hasEvents = eventsForDay.length > 0;
             const monthAbbr = day.toLocaleString('en-US', { month: 'short' });
             
             return (
@@ -206,6 +245,39 @@ const MonthlyView: React.FC = () => {
                     <div className="task-count">
                       {getCompletionsForDate(day).length}/{tasksForDay.length} tasks
                     </div>
+                  </div>
+                )}
+                
+                {hasEvents && (
+                  <div className="day-events" style={{ marginTop: hasAnyTasks ? '4px' : '8px' }}>
+                    {eventsForDay.map(event => {
+                      const eventEmoji = 
+                        event.category === 'Birthday' ? '🎂' :
+                        event.category === 'Anniversary' ? '💍' :
+                        event.category === 'Wedding' ? '💒' :
+                        event.category === 'Death Anniversary' ? '🕯️' :
+                        event.category === 'Memorial' ? '🌹' :
+                        event.category === 'Holiday' ? '🎉' :
+                        event.category === 'Festival' ? '🎊' :
+                        event.category === 'Special Day' ? '⭐' :
+                        '📅';
+                      
+                      return (
+                        <div 
+                          key={event.id}
+                          className="event-indicator"
+                          style={{
+                            display: 'inline-block',
+                            fontSize: '14px',
+                            margin: '2px',
+                            cursor: 'pointer'
+                          }}
+                          title={`${event.name}${event.description ? ': ' + event.description : ''}`}
+                        >
+                          {eventEmoji}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
