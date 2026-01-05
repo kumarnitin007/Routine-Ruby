@@ -17,8 +17,7 @@ import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import TodayView from './TodayView';
-import TasksView from './TasksView';
-import EventsView from './EventsView';
+import TasksAndEventsView from './TasksAndEventsView';
 import JournalView from './JournalView';
 import AnalyticsView from './AnalyticsView';
 import SettingsView from './SettingsView';
@@ -32,7 +31,7 @@ import AuthModal from './components/AuthModal';
 import { isFirstTimeUser, markOnboardingComplete } from './storage';
 import { loadSampleTasks } from './utils/sampleData';
 
-type View = 'today' | 'tasks' | 'events' | 'journal' | 'analytics' | 'settings';
+type View = 'today' | 'tasks-events' | 'journal' | 'analytics' | 'settings';
 
 /**
  * Main App Content Component
@@ -122,10 +121,8 @@ const AppContent: React.FC = () => {
     switch (currentView) {
       case 'today':
         return <TodayView key={`today-${key}`} onNavigate={handleNavigate} />;
-      case 'tasks':
-        return <TasksView key={`tasks-${key}`} />;
-      case 'events':
-        return <EventsView key={`events-${key}`} onNavigate={handleNavigate} />;
+      case 'tasks-events':
+        return <TasksAndEventsView key={`tasks-events-${key}`} onNavigate={handleNavigate} />;
       case 'journal':
         return <JournalView key={`journal-${key}`} />;
       case 'analytics':
@@ -177,22 +174,13 @@ const AppContent: React.FC = () => {
             <span className="nav-text">Dashboard</span>
           </button>
           <button
-            className={`nav-button ${currentView === 'tasks' ? 'active' : ''}`}
-            onClick={() => handleNavigate('tasks')}
-            title="Tasks & Routines"
-            style={currentView === 'tasks' ? { backgroundColor: theme.colors.primary } : {}}
+            className={`nav-button ${currentView === 'tasks-events' ? 'active' : ''}`}
+            onClick={() => handleNavigate('tasks-events')}
+            title="Tasks, Events & Routines"
+            style={currentView === 'tasks-events' ? { backgroundColor: theme.colors.primary } : {}}
           >
-            <span className="nav-icon">🎯</span>
-            <span className="nav-text">Tasks</span>
-          </button>
-          <button
-            className={`nav-button ${currentView === 'events' ? 'active' : ''}`}
-            onClick={() => handleNavigate('events')}
-            title="Birthdays, Anniversaries & Special Occasions"
-            style={currentView === 'events' ? { backgroundColor: theme.colors.primary } : {}}
-          >
-            <span className="nav-icon">📅</span>
-            <span className="nav-text">Events</span>
+            <span className="nav-icon">📋</span>
+            <span className="nav-text">Tasks & Events</span>
           </button>
           <button
             className={`nav-button ${currentView === 'journal' ? 'active' : ''}`}

@@ -6,9 +6,10 @@ import DayDetailsModal from './components/DayDetailsModal';
 
 interface MonthlyViewProps {
   onNavigate: (view: string) => void;
+  onBackToDashboard?: () => void;
 }
 
-const MonthlyView: React.FC<MonthlyViewProps> = ({ onNavigate }) => {
+const MonthlyView: React.FC<MonthlyViewProps> = ({ onNavigate, onBackToDashboard }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [completions, setCompletions] = useState<TaskCompletion[]>([]);
@@ -180,9 +181,16 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ onNavigate }) => {
           </button>
         </div>
 
-        <button className="btn-primary" onClick={goToToday} style={{ marginBottom: '1rem' }}>
-          Go to Today
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+          {onBackToDashboard && (
+            <button className="btn-secondary" onClick={onBackToDashboard}>
+              🏠 Back to Dashboard
+            </button>
+          )}
+          <button className="btn-primary" onClick={goToToday}>
+            📅 Go to Today
+          </button>
+        </div>
 
         <div className="calendar-legend">
           <div style={{ marginBottom: '0.5rem', fontWeight: 600 }}>Task Completion:</div>

@@ -35,9 +35,28 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
 
   // Calculate days until each event and filter to show advance reminders
   const getEventWithDaysUntil = (event: Event) => {
-    const eventDate = new Date(event.date + 'T00:00:00');
-    const selectedDate = new Date(date + 'T00:00:00');
-    const diffTime = eventDate.getTime() - selectedDate.getTime();
+    const selectedDateObj = new Date(date + 'T00:00:00');
+    const selectedYear = selectedDateObj.getFullYear();
+    const selectedMonth = selectedDateObj.getMonth() + 1;
+    const selectedDay = selectedDateObj.getDate();
+    
+    let eventDate: Date;
+    
+    if (event.frequency === 'yearly') {
+      // For yearly events, date is in MM-DD format
+      const [month, day] = event.date.split('-').map(Number);
+      eventDate = new Date(selectedYear, month - 1, day);
+      
+      // If event already passed this year, consider next year
+      if (eventDate < selectedDateObj) {
+        eventDate = new Date(selectedYear + 1, month - 1, day);
+      }
+    } else {
+      // For one-time events, date is in YYYY-MM-DD format
+      eventDate = new Date(event.date + 'T00:00:00');
+    }
+    
+    const diffTime = eventDate.getTime() - selectedDateObj.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     return {

@@ -15,9 +15,8 @@ import { getTodayString, getTasksForToday, formatDate, getWeekBounds, getMonthBo
 import { loadData, completeTask, isTaskCompletedToday, getTaskSpilloversForDate, moveTaskToNextDay, getCompletionCountForPeriod, saveTaskOrder, loadTaskOrder, getUpcomingEvents, acknowledgeEvent, isEventAcknowledged } from './storage';
 import TaskActionModal from './TaskActionModal';
 import CountdownTimer from './components/CountdownTimer';
-import MotivationalSection from './components/MotivationalSection';
 import ImportantDatesSection from './components/ImportantDatesSection';
-import ReviewOverlay from './components/ReviewOverlay';
+import ProgressAndReviewModal from './components/ProgressAndReviewModal';
 import SmartCoachSection from './components/SmartCoachSection';
 import { getUnderperformingTasks, isInsightDismissed, TaskInsight } from './services/aiInsights';
 import LayoutSelector from './components/LayoutSelector';
@@ -53,8 +52,7 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
   const [currentStreak, setCurrentStreak] = useState(0);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isReorderMode, setIsReorderMode] = useState(false);
-  const [showReviewOverlay, setShowReviewOverlay] = useState(false);
-  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [showProgressAndReview, setShowProgressAndReview] = useState(false);
   const [showSmartCoachModal, setShowSmartCoachModal] = useState(false);
   const [showBulkHoldModal, setShowBulkHoldModal] = useState(false);
   const [showTimer, setShowTimer] = useState(false);
@@ -737,7 +735,7 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
 
   // If monthly view is selected, show MonthlyView component
   if (viewMode === 'monthly') {
-    return <MonthlyView onNavigate={onNavigate} />;
+    return <MonthlyView onNavigate={onNavigate} onBackToDashboard={() => setViewMode('dashboard')} />;
   }
 
   return (
@@ -763,7 +761,7 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
               <span>{viewMode === 'dashboard' ? 'Monthly View' : 'Dashboard'}</span>
             </button>
             <button 
-              onClick={() => setShowProgressModal(true)}
+              onClick={() => setShowProgressAndReview(true)}
               className="btn-secondary"
               style={{ 
                 display: 'flex',
@@ -771,8 +769,8 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
                 gap: '0.5rem'
               }}
             >
-              <span>💪</span>
-              <span>Your Progress</span>
+              <span>📊</span>
+              <span>Progress & Review</span>
             </button>
             {aiInsight && (
               <button 
@@ -792,7 +790,7 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
               </button>
             )}
             <button 
-              onClick={() => setShowReviewOverlay(true)}
+              onClick={() => setIsReorderMode(!isReorderMode)}
               className="btn-primary"
               style={{ 
                 display: 'flex',
@@ -1128,20 +1126,11 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
         />
       )}
 
-      {/* Your Progress Modal */}
-      {showProgressModal && (
-        <div className="modal-overlay" onClick={() => setShowProgressModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', maxHeight: '90vh', overflow: 'auto' }}>
-            <div className="modal-header">
-              <h2>💪 Your Progress</h2>
-              <button className="modal-close" onClick={() => setShowProgressModal(false)}>×</button>
-            </div>
-            <div style={{ padding: '0' }}>
-              <MotivationalSection collapsed={false} />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Progress & Review Modal */}
+      <ProgressAndReviewModal
+        isOpen={showProgressAndReview}
+        onClose={() => setShowProgressAndReview(false)}
+      />
 
       {/* Smart Coach Modal */}
       {showSmartCoachModal && aiInsight && (
@@ -1151,7 +1140,11 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
               <h2>🤖 Smart Coach Insights</h2>
               <button className="modal-close" onClick={() => setShowSmartCoachModal(false)} style={{ color: 'white' }}>×</button>
             </div>
-            <div style={{ padding: '1.5rem' }}>
+            <div style={{ 
+              padding: '1.5rem',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white'
+            }}>
               <SmartCoachSection
                 insight={aiInsight}
                 onApply={() => {
@@ -1264,10 +1257,6 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
         </div>
       )}
 
-      <ReviewOverlay
-        isOpen={showReviewOverlay}
-        onClose={() => setShowReviewOverlay(false)}
-      />
     </div>
   );
 };
