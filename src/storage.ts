@@ -263,11 +263,16 @@ export const getEvents = async (): Promise<Event[]> => {
     name: event.name,
     description: event.description,
     category: event.category,
+    tags: event.tags || [],
     date: event.event_date,
-    notificationDays: event.notify_days_before || 7,
+    frequency: event.frequency || 'yearly',
+    customFrequency: event.custom_frequency,
+    year: event.year,
+    notifyDaysBefore: event.notify_days_before || 0,
     color: event.color,
-    priority: event.priority || 'medium',
-    hideFromDashboard: event.hide_from_dashboard || false
+    priority: event.priority || 5,
+    hideFromDashboard: event.hide_from_dashboard || false,
+    createdAt: event.created_at || new Date().toISOString()
   }));
 };
 
@@ -283,7 +288,7 @@ export const addEvent = async (event: Event): Promise<void> => {
       description: event.description,
       category: event.category,
       event_date: event.date,
-      notify_days_before: event.notificationDays,
+      notify_days_before: event.notifyDaysBefore,
       color: event.color,
       priority: event.priority,
       hide_from_dashboard: event.hideFromDashboard,
@@ -301,7 +306,7 @@ export const updateEvent = async (eventId: string, updates: Partial<Event>): Pro
   if (updates.description !== undefined) dbUpdates.description = updates.description;
   if (updates.category !== undefined) dbUpdates.category = updates.category;
   if (updates.date !== undefined) dbUpdates.event_date = updates.date;
-  if (updates.notificationDays !== undefined) dbUpdates.notify_days_before = updates.notificationDays;
+  if (updates.notifyDaysBefore !== undefined) dbUpdates.notify_days_before = updates.notifyDaysBefore;
   if (updates.color !== undefined) dbUpdates.color = updates.color;
   if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
   if (updates.hideFromDashboard !== undefined) dbUpdates.hide_from_dashboard = updates.hideFromDashboard;
@@ -344,7 +349,10 @@ export const getJournalEntries = async (): Promise<JournalEntry[]> => {
     id: entry.id,
     date: entry.entry_date,
     content: entry.content,
-    tags: entry.tags || []
+    mood: entry.mood,
+    tags: entry.tags || [],
+    createdAt: entry.created_at || new Date().toISOString(),
+    updatedAt: entry.updated_at || new Date().toISOString()
   }));
 };
 
@@ -402,7 +410,9 @@ export const getRoutines = async (): Promise<Routine[]> => {
     name: routine.name,
     description: routine.description,
     taskIds: routine.task_ids || [],
-    timeOfDay: routine.time_of_day
+    timeOfDay: routine.time_of_day,
+    isPreDefined: routine.is_pre_defined || false,
+    createdAt: routine.created_at || new Date().toISOString()
   }));
 };
 
@@ -470,7 +480,8 @@ export const getTags = async (): Promise<Tag[]> => {
     name: tag.name,
     color: tag.color,
     trackable: tag.trackable || false,
-    description: tag.description
+    description: tag.description,
+    createdAt: tag.created_at || new Date().toISOString()
   }));
 };
 
@@ -534,10 +545,8 @@ export const loadUserSettings = async (): Promise<UserSettings> => {
     if (data) {
       return {
         theme: data.theme || 'purple',
-        avatar: { emoji: '😊', name: 'Smiling Face' },
-        username: 'User',
         dashboardLayout: data.dashboard_layout || 'uniform',
-        notificationsEnabled: data.notifications_enabled ?? true
+        notifications: data.notifications_enabled ?? true
       };
     }
   } catch (error) {
@@ -547,10 +556,8 @@ export const loadUserSettings = async (): Promise<UserSettings> => {
   // Return defaults if loading fails
   return {
     theme: 'purple',
-    avatar: { emoji: '😊', name: 'Smiling Face' },
-    username: 'User',
     dashboardLayout: 'uniform',
-    notificationsEnabled: true
+    notifications: true
   };
 };
 
@@ -560,7 +567,7 @@ export const saveUserSettings = async (settings: Partial<UserSettings>): Promise
   const dbUpdates: any = {};
   if (settings.theme !== undefined) dbUpdates.theme = settings.theme;
   if (settings.dashboardLayout !== undefined) dbUpdates.dashboard_layout = settings.dashboardLayout;
-  if (settings.notificationsEnabled !== undefined) dbUpdates.notifications_enabled = settings.notificationsEnabled;
+  if (settings.notifications !== undefined) dbUpdates.notifications_enabled = settings.notifications;
   
   const { error } = await client
     .from('myday_user_settings')
@@ -591,10 +598,8 @@ export const getUserSettingsSync = (): UserSettings => {
   if (!stored) {
     return {
       theme: 'purple',
-      avatar: { emoji: '😊', name: 'Smiling Face' },
-      username: 'User',
       dashboardLayout: 'uniform',
-      notificationsEnabled: true
+      notifications: true
     };
   }
   return JSON.parse(stored);
@@ -705,7 +710,7 @@ export const getUpcomingEvents = async (daysAhead: number = 7): Promise<Array<{ 
       const eventDate = new Date(event.date);
       const daysDiff = Math.floor((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       
-      if (daysDiff >= 0 && daysDiff <= (event.notificationDays || 7)) {
+      if (daysDiff >= 0 && daysDiff <= (event.notifyDaysBefore || 7)) {
         upcoming.push({
           event,
           date: dateStr,
