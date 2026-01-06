@@ -27,9 +27,11 @@
     
     <!-- Service Worker Registration -->
     <!-- Note: Service Worker uses network-first strategy in development (localhost) -->
-    <!-- To completely disable Service Worker during dev, comment out this script block -->
+    <!-- To completely disable Service Worker during dev, set DISABLE_SW to true below or comment out this script block -->
     <script>
-      if ('serviceWorker' in navigator) {
+      const DISABLE_SW = false; // Set to true to disable service worker
+      
+      if (!DISABLE_SW && 'serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/service-worker.js')
             .then((registration) => {
@@ -41,6 +43,8 @@
               console.log('Service Worker registration failed:', error);
             });
         });
+      } else if (DISABLE_SW) {
+        console.log('⚠️ Service Worker is disabled (DISABLE_SW = true)');
       }
     </script>
   </body>

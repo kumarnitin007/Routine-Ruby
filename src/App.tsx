@@ -108,9 +108,21 @@ const AppContent: React.FC = () => {
   // }, [authLoading, isAuthenticated, showOnboarding]);
 
   // Listen for storage changes (e.g., from another tab)
+  // Only refresh on specific key changes to avoid unnecessary refreshes
   useEffect(() => {
-    const handleStorageChange = () => {
-      setKey(prev => prev + 1);
+    const handleStorageChange = (e: StorageEvent) => {
+      // Only refresh if it's a meaningful change from another tab
+      // Skip if it's the same window (storage event only fires for other tabs anyway)
+      if (e.key && (
+        e.key.includes('user-settings') || 
+        e.key.includes('theme') ||
+        e.key.includes('onboarding')
+      )) {
+        // Debounce rapid changes
+        setTimeout(() => {
+          setKey(prev => prev + 1);
+        }, 100);
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);

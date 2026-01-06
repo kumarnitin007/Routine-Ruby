@@ -12,6 +12,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Task } from '../types';
+import TimerAnimations, { TimerTheme } from './TimerAnimations';
 
 interface CountdownTimerProps {
   task: Task;
@@ -40,6 +41,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
   const [isPaused, setIsPaused] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [pausedTime, setPausedTime] = useState(0);
+  const [selectedTheme, setSelectedTheme] = useState<TimerTheme>('pacman');
   
   const intervalRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -253,6 +255,64 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
               <button onClick={() => { setHours(1); setMinutes(0); }} style={presetButtonStyle}>1h</button>
               <button onClick={() => { setHours(2); setMinutes(0); }} style={presetButtonStyle}>2h</button>
             </div>
+
+            {/* Animation Theme Selector */}
+            <div style={{ 
+              marginTop: '2rem', 
+              padding: '1.5rem', 
+              background: 'rgba(255, 255, 255, 0.1)', 
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '1rem', 
+                fontSize: '1rem', 
+                fontWeight: 600 
+              }}>
+                🎨 Choose Animation Theme
+              </label>
+              <div style={{ 
+                display: 'flex', 
+                gap: '0.75rem', 
+                flexWrap: 'wrap', 
+                justifyContent: 'center' 
+              }}>
+                {(['pacman', 'liquid', 'plant', 'pulse', 'runner'] as TimerTheme[]).map((theme) => (
+                  <button
+                    key={theme}
+                    onClick={() => setSelectedTheme(theme)}
+                    style={{
+                      padding: '0.75rem 1.25rem',
+                      fontSize: '0.9rem',
+                      fontWeight: 600,
+                      background: selectedTheme === theme 
+                        ? 'white' 
+                        : 'rgba(255, 255, 255, 0.2)',
+                      color: selectedTheme === theme 
+                        ? '#667eea' 
+                        : 'white',
+                      border: '2px solid white',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      textTransform: 'capitalize',
+                      transition: 'all 0.2s',
+                      boxShadow: selectedTheme === theme 
+                        ? '0 4px 12px rgba(0, 0, 0, 0.2)' 
+                        : 'none'
+                    }}
+                  >
+                    {theme === 'pacman' && '👾'}
+                    {theme === 'liquid' && '💧'}
+                    {theme === 'plant' && '🌱'}
+                    {theme === 'pulse' && '💫'}
+                    {theme === 'runner' && '🏃'}
+                    {' '}
+                    {theme}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
@@ -346,24 +406,16 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
         </div>
       )}
 
-      {/* Progress bar (only for countdown mode) */}
+      {/* Animated Progress (only for countdown mode) */}
       {!isComplete && mode === 'countdown' && (
-        <div style={{
-          width: '80%',
-          maxWidth: '600px',
-          height: '12px',
-          background: 'rgba(255, 255, 255, 0.2)',
-          borderRadius: '6px',
-          overflow: 'hidden',
-          marginBottom: '3rem'
-        }}>
-          <div style={{
-            width: `${getProgressPercentage()}%`,
-            height: '100%',
-            background: getTimeColor(),
-            transition: 'width 1s linear, background 0.3s',
-            borderRadius: '6px'
-          }} />
+        <div style={{ marginBottom: '3rem' }}>
+          <TimerAnimations
+            theme={selectedTheme}
+            progress={getProgressPercentage()}
+            remainingSeconds={remainingSeconds}
+            totalSeconds={totalSeconds}
+            isComplete={false}
+          />
         </div>
       )}
 

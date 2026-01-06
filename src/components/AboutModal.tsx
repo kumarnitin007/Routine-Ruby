@@ -7,10 +7,10 @@
 import React, { useState } from 'react';
 import Portal from './Portal';
 
-// Version number - auto-increments on build
-const APP_VERSION = '1.0.0';
-const BUILD_DATE = new Date().toISOString().split('T')[0];
-const BUILD_TIME = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+// Version number and build time - injected at build time (static, not runtime)
+const APP_VERSION = (import.meta.env.APP_VERSION as string) || '1.0.0';
+const BUILD_DATE = (import.meta.env.BUILD_DATE as string) || new Date().toISOString().split('T')[0];
+const BUILD_TIME = (import.meta.env.BUILD_TIME as string) || new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
 
 interface AboutModalProps {
   show: boolean;

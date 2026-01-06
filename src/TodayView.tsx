@@ -9,7 +9,7 @@
  * - Per-task missed count (shown in each card)
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Task, Event, AppData } from './types';
 import { getTodayString, getTasksForToday, formatDate, getWeekBounds, getMonthBounds, shouldTaskShowToday } from './utils';
 import { loadData, completeTask, isTaskCompletedToday, getTaskSpilloversForDate, moveTaskToNextDay, getCompletionCountForPeriod, saveTaskOrder, loadTaskOrder, getUpcomingEvents, acknowledgeEvent, isEventAcknowledged } from './storage';
@@ -120,16 +120,30 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
     }
   };
 
+  // Track previous selectedDate to prevent unnecessary reloads
+  const prevSelectedDateRef = useRef<string>('');
+  const hasLoadedRef = useRef<boolean>(false);
+  
   useEffect(() => {
+    // Skip if selectedDate hasn't actually changed AND we've already loaded data
+    // Always load on first run or when auth state changes
+    if (prevSelectedDateRef.current === selectedDate && hasLoadedRef.current && !authLoading) {
+      return;
+    }
+    
+    prevSelectedDateRef.current = selectedDate;
+    
     const init = async () => {
       // Only load data if user is authenticated
       if (!authLoading && user) {
         await loadItems();
         await calculateStreak();
         await loadAIInsights();
+        hasLoadedRef.current = true;
       } else if (!authLoading && !user) {
         // User is not authenticated, set loading to false
         setIsLoading(false);
+        hasLoadedRef.current = false; // Reset when user logs out
       }
     };
     init();
@@ -886,18 +900,6 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
                 <span>Smart Coach</span>
               </button>
             )}
-            <button 
-              onClick={() => setIsReorderMode(!isReorderMode)}
-              className="btn-primary"
-              style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              <span>📊</span>
-              <span>Review</span>
-            </button>
             <button 
               onClick={() => setIsReorderMode(!isReorderMode)}
               className="btn-secondary"
