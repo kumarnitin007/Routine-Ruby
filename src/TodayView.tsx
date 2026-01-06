@@ -24,6 +24,7 @@ import { DashboardLayout } from './types';
 import { getDashboardLayout, setDashboardLayout, bulkHoldTasks, bulkUnholdTasks } from './storage';
 import { useAuth } from './contexts/AuthContext';
 import MonthlyView from './MonthlyView';
+import WeatherWidget from './components/WeatherWidget';
 
 type DashboardItem = {
   type: 'task' | 'event';
@@ -61,6 +62,7 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
   const [dashboardLayout, setDashboardLayoutState] = useState<DashboardLayout>(getDashboardLayout());
   const [isLoading, setIsLoading] = useState(true);
   const [appData, setAppData] = useState<AppData | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayString());
   const today = getTodayString();
 
   const handleLayoutChange = async (layout: DashboardLayout) => {
@@ -131,25 +133,74 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
       }
     };
     init();
-  }, [authLoading, user]);
+  }, [authLoading, user, selectedDate]);
+
+  // Helper function to check if task should show on a specific date
+  const shouldTaskShowOnDate = (task: Task, dateStr: string): boolean => {
+    const date = new Date(dateStr + 'T00:00:00');
+    const dayOfWeek = date.getDay();
+    const dayOfMonth = date.getDate();
+
+    // Check if task is on hold
+    if (task.onHold && task.holdStartDate) {
+      if (dateStr >= task.holdStartDate) {
+        if (!task.holdEndDate || dateStr <= task.holdEndDate) {
+          return false;
+        }
+      }
+    }
+
+    // Check start date
+    if (task.startDate && dateStr < task.startDate) {
+      return false;
+    }
+
+    // Check end date
+    if (task.endDate && dateStr > task.endDate) {
+      return false;
+    }
+
+    // Check specific date
+    if (task.specificDate) {
+      return dateStr === task.specificDate;
+    }
+
+    // Check frequency
+    switch (task.frequency) {
+      case 'daily':
+        return true;
+      case 'weekly':
+        return task.daysOfWeek?.includes(dayOfWeek) || false;
+      case 'monthly':
+        return task.dayOfMonth === dayOfMonth;
+      case 'count-based':
+        return true;
+      case 'interval':
+        return isIntervalMatch(task, dateStr);
+      default:
+        return false;
+    }
+  };
 
   const loadItems = async () => {
     try {
       setIsLoading(true);
       const data = await loadData();
       setAppData(data); // Store data in state
-      const todayTasks = getTasksForToday(data.tasks);
       
-      // Get spillover tasks (currently returns empty array)
-      const spillovers = await getTaskSpilloversForDate(today);
+      // Get tasks for selected date (not just today)
+      const dateTasks = data.tasks.filter(task => shouldTaskShowOnDate(task, selectedDate));
+      
+      // Get spillover tasks
+      const spillovers = await getTaskSpilloversForDate(selectedDate);
       const spilloverTaskIds = spillovers.map(s => s.taskId);
       const spilloverTasks = data.tasks.filter(t => spilloverTaskIds.includes(t.id));
       
       // Combine tasks
-      const allTaskIds = new Set([...todayTasks.map(t => t.id), ...spilloverTasks.map(t => t.id)]);
+      const allTaskIds = new Set([...dateTasks.map(t => t.id), ...spilloverTasks.map(t => t.id)]);
       let combinedTasks = data.tasks.filter(t => allTaskIds.has(t.id));
       
-      // Get upcoming events (within next 3 days) and filter out hidden ones
+      // Get events for selected date (show events on that day or upcoming)
       const upcomingEvents = (await getUpcomingEvents(3)).filter(({ event }) => !event.hideFromDashboard);
       
       // Convert tasks to dashboard items
@@ -160,7 +211,7 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
         name: task.name,
         description: task.description,
         category: task.category,
-        isCompleted: isTaskCompletedToday(task.id, today, data.completions),
+        isCompleted: isTaskCompletedToday(task.id, selectedDate, data.completions),
         weightage: task.weightage,
         color: task.color
       }));
@@ -173,8 +224,8 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
       name: event.name,
       description: event.description,
       category: event.category,
-      isCompleted: isEventAcknowledged(event.id, today),
-      weightage: event.priority || 5, // Use event's priority, default 5
+      isCompleted: isEventAcknowledged(event.id, selectedDate),
+      weightage: event.priority || 5,
       color: event.color,
       daysUntil
     }));
@@ -725,7 +776,7 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
           fontSize: '4rem',
           animation: 'pulse 2s ease-in-out infinite'
         }}>
-          🐦
+          🦁
         </div>
         <h2 style={{ color: 'white', fontSize: '1.5rem' }}>Loading your tasks...</h2>
         <p style={{ color: 'rgba(255,255,255,0.8)' }}>Getting everything ready for your productive day!</p>
@@ -742,9 +793,55 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
     <div className="today-view">
       <div className="date-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <h2>Today's Goals</h2>
-            <p>{formatDateLong()}</p>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+              <div>
+                <h2>{selectedDate === today ? "Today's Goals" : "Goals"}</h2>
+                <p>{selectedDate === today ? formatDateLong() : new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+              </div>
+              {/* Day Navigation Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button
+                  onClick={() => {
+                    const date = new Date(selectedDate + 'T00:00:00');
+                    date.setDate(date.getDate() - 1);
+                    setSelectedDate(formatDate(date));
+                    loadItems();
+                  }}
+                  className="btn-secondary"
+                  style={{ padding: '0.5rem', minWidth: '40px' }}
+                  title="Previous Day"
+                >
+                  ←
+                </button>
+                {selectedDate !== today && (
+                  <button
+                    onClick={() => {
+                      setSelectedDate(today);
+                      loadItems();
+                    }}
+                    className="btn-primary"
+                    style={{ padding: '0.5rem 1rem' }}
+                    title="Go to Today"
+                  >
+                    Today
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    const date = new Date(selectedDate + 'T00:00:00');
+                    date.setDate(date.getDate() + 1);
+                    setSelectedDate(formatDate(date));
+                    loadItems();
+                  }}
+                  className="btn-secondary"
+                  style={{ padding: '0.5rem', minWidth: '40px' }}
+                  title="Next Day"
+                >
+                  →
+                </button>
+              </div>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {/* View Toggle */}
@@ -876,15 +973,6 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
         </div>
       ) : (
         <>
-          {/* Layout Selector */}
-          {!isReorderMode && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-              <LayoutSelector
-                currentLayout={dashboardLayout}
-                onLayoutChange={handleLayoutChange}
-              />
-            </div>
-          )}
 
           <div className={`tasks-grid layout-${dashboardLayout}`}>
           {items
@@ -1256,6 +1344,9 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
           </div>
         </div>
       )}
+
+      {/* Weather Widget - Bottom of Dashboard */}
+      <WeatherWidget />
 
     </div>
   );

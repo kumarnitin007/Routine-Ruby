@@ -5,8 +5,9 @@
  * Includes advance reminders for upcoming events
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Task, Event } from '../types';
+import { getTodayString } from '../utils';
 
 interface DayDetailsModalProps {
   date: string; // YYYY-MM-DD format
@@ -25,7 +26,11 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
   onClose,
   onCompleteTask
 }) => {
+  const [editMode, setEditMode] = useState(false); // Reset each time modal opens
   const dateObj = new Date(date + 'T00:00:00');
+  const today = getTodayString();
+  const isPastDate = date < today;
+  const canEdit = editMode && isPastDate;
   const formattedDate = dateObj.toLocaleDateString('en-US', { 
     weekday: 'long', 
     year: 'numeric', 
@@ -121,6 +126,44 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
         </div>
 
         <div style={{ padding: '1.5rem' }}>
+          {/* History Edit Mode Toggle - Show for all dates (but only works for past dates) */}
+          <div style={{ 
+            marginBottom: '1.5rem', 
+            padding: '1rem', 
+            background: isPastDate ? '#fef3c7' : '#f3f4f6', 
+            borderRadius: '8px',
+            border: `1px solid ${isPastDate ? '#fbbf24' : '#d1d5db'}`
+          }}>
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.75rem', 
+              cursor: isPastDate ? 'pointer' : 'not-allowed',
+              fontSize: '0.95rem',
+              fontWeight: 500,
+              opacity: isPastDate ? 1 : 0.6
+            }}>
+              <input
+                type="checkbox"
+                checked={editMode}
+                onChange={() => isPastDate && setEditMode(!editMode)}
+                disabled={!isPastDate}
+                style={{ width: '18px', height: '18px', cursor: isPastDate ? 'pointer' : 'not-allowed' }}
+              />
+              <span>Enable History Edit Mode {!isPastDate && '(Only available for past dates)'}</span>
+            </label>
+            {editMode && isPastDate && (
+              <p style={{ 
+                margin: '0.5rem 0 0 2rem', 
+                fontSize: '0.85rem', 
+                color: '#92400e',
+                fontStyle: 'italic'
+              }}>
+                ✓ You can now edit task completion status for this past date.
+              </p>
+            )}
+          </div>
+
           {/* Upcoming Reminders Section */}
           {upcomingReminders.length > 0 && (
             <div style={{ marginBottom: '2rem' }}>
@@ -266,31 +309,38 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                         background: isCompleted 
                           ? 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)'
                           : 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
-                        border: `2px solid ${isCompleted ? '#10b981' : '#d1d5db'}`,
+                        border: `2px solid ${isCompleted ? '#10b981' : (task.color || '#667eea')}`,
                         borderRadius: '12px',
                         padding: '1rem',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '1rem',
-                        opacity: isCompleted ? 0.7 : 1,
-                        textDecoration: isCompleted ? 'line-through' : 'none'
+                        gap: '1rem'
                       }}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isCompleted}
-                        onChange={() => onCompleteTask(task.id)}
-                        style={{
-                          width: '20px',
-                          height: '20px',
-                          cursor: 'pointer'
-                        }}
-                      />
+                      {/* Show icon like events - no checkboxes unless in edit mode */}
+                      {canEdit ? (
+                        <input
+                          type="checkbox"
+                          checked={isCompleted}
+                          onChange={() => onCompleteTask(task.id)}
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            cursor: 'pointer',
+                            flexShrink: 0
+                          }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: '2rem', flexShrink: 0 }}>
+                          {isCompleted ? '✅' : '📋'}
+                        </span>
+                      )}
                       <div style={{ flex: 1 }}>
                         <div style={{ 
                           fontWeight: 600, 
-                          color: '#1f2937',
-                          marginBottom: '0.25rem'
+                          color: isCompleted ? '#6b7280' : '#1f2937',
+                          marginBottom: '0.25rem',
+                          textDecoration: isCompleted ? 'line-through' : 'none'
                         }}>
                           {task.name}
                         </div>
@@ -302,33 +352,6 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                             {task.description}
                           </div>
                         )}
-                        <div style={{
-                          display: 'flex',
-                          gap: '0.5rem',
-                          marginTop: '0.5rem',
-                          fontSize: '0.75rem'
-                        }}>
-                          <span style={{
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '4px',
-                            background: task.color || '#667eea',
-                            color: 'white',
-                            fontWeight: 600
-                          }}>
-                            {task.category || 'General'}
-                          </span>
-                          {task.endTime && (
-                            <span style={{
-                              padding: '0.25rem 0.5rem',
-                              borderRadius: '4px',
-                              background: '#dbeafe',
-                              color: '#1e40af',
-                              fontWeight: 600
-                            }}>
-                              ⏰ {task.endTime}
-                            </span>
-                          )}
-                        </div>
                       </div>
                     </div>
                   );

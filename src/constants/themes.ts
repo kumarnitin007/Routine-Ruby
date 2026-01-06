@@ -1,7 +1,7 @@
 /**
  * Theme Constants
  * 
- * This file defines all available themes for the Routine Ruby app.
+ * This file defines all available themes for the Leo Planner app.
  * Each theme includes colors, gradients, and styling properties
  * that create a unique visual experience.
  * 
@@ -41,9 +41,9 @@ export interface Theme {
 export const themes: Theme[] = [
   {
     id: 'routine-ruby',
-    name: 'Routine Ruby',
-    emoji: '🐦',
-    description: 'Elegant muted ruby - inspired by hummingbirds',
+    name: 'Leo Planner',
+    emoji: '🦁',
+    description: 'Elegant muted ruby - inspired by lions',
     colors: {
       primary: '#8B3A3A',
       secondary: '#6B2C2C',

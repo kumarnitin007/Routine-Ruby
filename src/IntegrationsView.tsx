@@ -214,7 +214,7 @@ const IntegrationsView: React.FC = () => {
       <div className="integrations-header">
         <div>
           <h2>🔌 Integration Hub</h2>
-          <p>Connect Routine Ruby with your favorite productivity tools - hover over what matters!</p>
+          <p>Connect Leo Planner with your favorite productivity tools - plan with strength!</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button onClick={() => setShowImportModal(true)} className="btn-secondary">

@@ -1,11 +1,11 @@
 {
-  "name": "Routine Ruby - Your day, in full flight",
-  "short_name": "Routine Ruby",
-  "description": "Stay in motion, stay organized. Beautiful daily task tracking with the energy of a hummingbird.",
+  "name": "Leo Planner - Plan with the strength of a lion",
+  "short_name": "Leo Planner",
+  "description": "Plan with the strength of a lion. Beautiful daily task tracking and event management.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#e11d48",
-  "theme_color": "#e11d48",
+  "background_color": "#14b8a6",
+  "theme_color": "#14b8a6",
   "orientation": "portrait-primary",
   "icons": [
     {

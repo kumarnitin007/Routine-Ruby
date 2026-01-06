@@ -92,6 +92,11 @@ export interface UserSettings {
   dashboardLayout: DashboardLayout;
   theme?: string;
   notifications?: boolean;
+  location?: {
+    zipCode?: string;
+    city?: string;
+    country?: string;
+  };
 }
 
 export interface Routine {

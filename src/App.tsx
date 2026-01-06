@@ -145,8 +145,8 @@ const AppContent: React.FC = () => {
         <div className="header-left">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '1.75rem' }}>🐦</span>
-              <h1 style={{ margin: 0 }}>Routine Ruby</h1>
+              <span style={{ fontSize: '1.75rem' }}>🦁</span>
+              <h1 style={{ margin: 0 }}>Leo Planner</h1>
             </div>
             <p style={{ 
               fontSize: '0.75rem', 
@@ -155,7 +155,7 @@ const AppContent: React.FC = () => {
               fontStyle: 'italic',
               paddingLeft: '2.25rem'
             }}>
-              Your day, in full flight
+              Plan with the strength of a lion
             </p>
           </div>
           <div className="user-badge" title={username}>
@@ -214,7 +214,7 @@ const AppContent: React.FC = () => {
           <button
             className="icon-button"
             onClick={() => setShowAbout(true)}
-            title="About Routine Ruby"
+            title="About Leo Planner"
             style={{ color: theme.colors.primary }}
           >
             ℹ️

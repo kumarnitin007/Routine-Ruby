@@ -84,10 +84,10 @@ const PWAInstallPrompt: React.FC = () => {
   return (
     <div className="pwa-install-prompt">
       <div className="pwa-prompt-content">
-        <div className="pwa-prompt-icon">🐦</div>
+        <div className="pwa-prompt-icon">🦁</div>
         <div className="pwa-prompt-text">
-          <h4>Install Routine Ruby</h4>
-          <p>Let Routine Ruby take flight! Add to your home screen for quick access and offline support!</p>
+          <h4>Install Leo Planner</h4>
+          <p>Plan with strength! Add Leo Planner to your home screen for quick access and offline support!</p>
         </div>
         <div className="pwa-prompt-actions">
           <button onClick={handleInstallClick} className="pwa-install-btn">

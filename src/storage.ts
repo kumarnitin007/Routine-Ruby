@@ -632,7 +632,7 @@ export const loadUserSettings = async (): Promise<UserSettings> => {
     const { client, userId } = await requireAuth();
     const { data, error } = await client
       .from('myday_user_settings')
-      .select('theme, dashboard_layout, notifications_enabled')
+      .select('theme, dashboard_layout, notifications_enabled, location')
       .eq('user_id', userId)
       .single();
     
@@ -644,7 +644,8 @@ export const loadUserSettings = async (): Promise<UserSettings> => {
       return {
         theme: data.theme || 'purple',
         dashboardLayout: data.dashboard_layout || 'uniform',
-        notifications: data.notifications_enabled ?? true
+        notifications: data.notifications_enabled ?? true,
+        location: data.location ? JSON.parse(data.location) : undefined
       };
     }
   } catch (error) {
@@ -655,7 +656,8 @@ export const loadUserSettings = async (): Promise<UserSettings> => {
   return {
     theme: 'purple',
     dashboardLayout: 'uniform',
-    notifications: true
+    notifications: true,
+    location: undefined
   };
 };
 
@@ -666,6 +668,7 @@ export const saveUserSettings = async (settings: Partial<UserSettings>): Promise
   if (settings.theme !== undefined) dbUpdates.theme = settings.theme;
   if (settings.dashboardLayout !== undefined) dbUpdates.dashboard_layout = settings.dashboardLayout;
   if (settings.notifications !== undefined) dbUpdates.notifications_enabled = settings.notifications;
+  if (settings.location !== undefined) dbUpdates.location = JSON.stringify(settings.location);
   
   const { error } = await client
     .from('myday_user_settings')
@@ -690,14 +693,15 @@ export const saveUserSettings = async (settings: Partial<UserSettings>): Promise
 // Alias for backward compatibility
 export const getUserSettings = loadUserSettings;
 
-// Sync version for initial load (returns cached data from localStorage)
+  // Sync version for initial load (returns cached data from localStorage)
 export const getUserSettingsSync = (): UserSettings => {
   const stored = localStorage.getItem(USER_SETTINGS_KEY);
   if (!stored) {
     return {
       theme: 'purple',
       dashboardLayout: 'uniform',
-      notifications: true
+      notifications: true,
+      location: undefined
     };
   }
   return JSON.parse(stored);

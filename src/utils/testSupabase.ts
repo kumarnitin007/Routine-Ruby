@@ -123,7 +123,7 @@ export const testSupabaseConnection = async () => {
   console.log('   1. Enable Email authentication in Supabase Dashboard');
   console.log('      (Authentication → Providers → Email)');
   console.log('   2. Create your first user account in the app');
-  console.log('   3. Start using Routine Ruby with cloud sync!');
+  console.log('   3. Start using Leo Planner with cloud sync!');
   console.log('\n📚 Docs: See SETUP_INSTRUCTIONS.md for more details\n');
 
   return true;

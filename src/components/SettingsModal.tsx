@@ -26,19 +26,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ show, onClose }) => {
   const [selectedCategory, setSelectedCategory] = useState(avatar.category);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [dashboardLayout, setDashboardLayout] = useState<DashboardLayout>('uniform');
+  const [location, setLocation] = useState<{ zipCode?: string; city?: string; country?: string }>({});
 
-  // Load dashboard layout from settings
+  // Load settings from storage
   React.useEffect(() => {
-    const loadLayout = async () => {
+    const loadSettings = async () => {
       try {
         const settings = await getUserSettings();
         setDashboardLayout(settings.dashboardLayout);
+        setLocation(settings.location || {});
       } catch (error) {
-        console.error('Error loading dashboard layout:', error);
+        console.error('Error loading settings:', error);
       }
     };
     if (show) {
-      loadLayout();
+      loadSettings();
     }
   }, [show]);
 
@@ -48,7 +50,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ show, onClose }) => {
     try {
       await setUsername(editingUsername);
       await setEmail(editingEmail);
-      await saveUserSettings({ dashboardLayout });
+      await saveUserSettings({ dashboardLayout, location });
       onClose();
       // Note: Layout and theme changes apply immediately via context
       // No reload needed - preserves navigation state
@@ -164,6 +166,51 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ show, onClose }) => {
                   <h4 style={{ margin: 0, fontWeight: 'bold', fontSize: '1rem' }}>{theme.name}</h4>
                   <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>{theme.description}</p>
                 </div>
+              </div>
+            </div>
+
+            {/* Location for Weather */}
+            <div style={{ background: 'linear-gradient(to right, #fef3c7, #fde68a)', borderRadius: '1rem', padding: '1.5rem', marginBottom: '1.5rem', border: '1px solid #fbbf24' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <span style={{ fontSize: '1.5rem' }}>📍</span>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0 }}>Location for Weather</h3>
+              </div>
+              <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
+                Enter your location to see weather forecasts on your dashboard
+              </p>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem' }}>Zip/Postal Code</label>
+                <input 
+                  type="text" 
+                  value={location.zipCode || ''} 
+                  onChange={(e) => setLocation({ ...location, zipCode: e.target.value })} 
+                  placeholder="e.g., 10001 or SW1A 1AA" 
+                  style={{ width: '100%', padding: '0.5rem 1rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '1rem' }} 
+                />
+              </div>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem' }}>City</label>
+                <input 
+                  type="text" 
+                  value={location.city || ''} 
+                  onChange={(e) => setLocation({ ...location, city: e.target.value })} 
+                  placeholder="e.g., New York" 
+                  style={{ width: '100%', padding: '0.5rem 1rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '1rem' }} 
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem' }}>Country Code (ISO 2-letter)</label>
+                <input 
+                  type="text" 
+                  value={location.country || ''} 
+                  onChange={(e) => setLocation({ ...location, country: e.target.value.toUpperCase().slice(0, 2) })} 
+                  placeholder="e.g., US, GB, CA" 
+                  maxLength={2}
+                  style={{ width: '100%', padding: '0.5rem 1rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '1rem' }} 
+                />
+                <small style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem', color: '#6b7280' }}>
+                  Use 2-letter ISO country code (US, GB, CA, etc.)
+                </small>
               </div>
             </div>
 

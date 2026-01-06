@@ -1,11 +1,16 @@
 /**
  * About Modal Component
  * 
- * Displays information about the Routine Ruby app.
+ * Displays information about the Leo Planner app.
  */
 
 import React, { useState } from 'react';
 import Portal from './Portal';
+
+// Version number - auto-increments on build
+const APP_VERSION = '1.0.0';
+const BUILD_DATE = new Date().toISOString().split('T')[0];
+const BUILD_TIME = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
 
 interface AboutModalProps {
   show: boolean;
@@ -26,8 +31,8 @@ const AboutModal: React.FC<AboutModalProps> = ({ show, onClose }) => {
           <div style={{ padding: '1.5rem', borderBottom: '2px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'white', zIndex: 10, borderRadius: '1rem 1rem 0 0' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontSize: '2.5rem' }}>🐦</span>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>About Routine Ruby</h2>
+                <span style={{ fontSize: '2.5rem' }}>🦁</span>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>About Leo Planner</h2>
               </div>
               <p style={{ 
                 fontSize: '0.9rem', 
@@ -37,31 +42,44 @@ const AboutModal: React.FC<AboutModalProps> = ({ show, onClose }) => {
                 fontWeight: 600,
                 paddingLeft: '3.25rem'
               }}>
-                Your day, in full flight ✨
+                Plan with the strength of a lion 🦁✨
               </p>
             </div>
             <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>✕</button>
           </div>
 
           <div style={{ padding: '1.5rem' }}>
+            {/* Version Number - Top */}
+            <div style={{ 
+              background: 'linear-gradient(to right, #f0fdfa, #ccfbf1)', 
+              borderRadius: '0.75rem', 
+              padding: '0.75rem 1rem', 
+              marginBottom: '1.5rem', 
+              border: '1px solid #5eead4',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '0.875rem', color: '#0f766e', fontWeight: 600 }}>
+                Version {APP_VERSION} • Built: {BUILD_DATE} {BUILD_TIME}
+              </div>
+            </div>
             {/* About */}
             <div style={{ background: 'linear-gradient(to right, #ccfbf1, #a5f3fc)', borderRadius: '1rem', padding: '1.5rem', marginBottom: '1.5rem', border: '1px solid #5eead4' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '1.25rem' }}>🐦</span>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0, color: '#0f766e' }}>Stay in Motion, Stay Organized</h3>
+                <span style={{ fontSize: '1.25rem' }}>🦁</span>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0, color: '#0f766e' }}>Plan with Strength and Clarity</h3>
               </div>
               <p style={{ color: '#374151', lineHeight: '1.6', fontSize: '0.95rem', margin: '0 0 1rem 0' }}>
-                Like a hummingbird in flight, Routine Ruby helps you hover over what matters most. 🐦✨ Track your daily tasks with the energy and grace of nature's most dynamic bird. Small tasks create big momentum - just as hummingbirds beat their wings 80 times per second, your consistent actions build unstoppable progress!
+                Leo Planner helps you organize your day with the confidence and precision of a lion. 🦁✨ Track your daily tasks, manage events, and stay on top of your schedule. Like a lion's focused approach, your consistent planning builds unstoppable momentum and helps you achieve your goals with strength and clarity!
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1rem' }}>
                 <div style={{ background: 'rgba(255,255,255,0.7)', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontStyle: 'italic', color: '#14b8a6' }}>
                   💎 Daily tasks, beautifully done
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.7)', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontStyle: 'italic', color: '#14b8a6' }}>
-                  ⚡ Small tasks, big momentum
+                  ⚡ Plan with precision
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.7)', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontStyle: 'italic', color: '#14b8a6' }}>
-                  🎯 Hover over what matters
+                  🎯 Stay organized, stay strong
                 </div>
               </div>
             </div>
@@ -233,18 +251,18 @@ const AboutModal: React.FC<AboutModalProps> = ({ show, onClose }) => {
                     </p>
                   </div>
 
-                  {/* Routine Ruby */}
+                  {/* Leo Planner */}
                   <div style={{ background: 'linear-gradient(to right, #d1fae5, #a7f3d0)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid #6ee7b7' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <p style={{ fontWeight: 'bold', margin: 0, fontSize: '1rem', color: '#065f46' }}>🐦 Routine Ruby (You are here!)</p>
+                      <p style={{ fontWeight: 'bold', margin: 0, fontSize: '1rem', color: '#065f46' }}>🦁 Leo Planner (You are here!)</p>
                       <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#059669', background: 'rgba(255,255,255,0.7)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem' }}>
                         Current App
                       </span>
                     </div>
                     <p style={{ fontSize: '0.875rem', margin: 0, color: '#374151', lineHeight: '1.5' }}>
                       Your daily task manager and productivity companion! Track tasks with streaks, get AI-powered 
-                      coaching, manage events and journals, use focus timers, and stay organized with the grace 
-                      of a hummingbird in flight! 🐦✨
+                      coaching, manage events and journals, use focus timers, and stay organized with the strength 
+                      and precision of a lion! 🦁✨
                     </p>
                   </div>
 
@@ -270,10 +288,10 @@ const AboutModal: React.FC<AboutModalProps> = ({ show, onClose }) => {
             <div style={{ background: 'linear-gradient(to right, #d1fae5, #a7f3d0)', borderRadius: '1rem', padding: '1.5rem', marginBottom: '1.5rem', border: '1px solid #6ee7b7' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
                 <span style={{ fontSize: '1.25rem' }}>💚</span>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0, color: '#065f46' }}>Support Routine Ruby</h3>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0, color: '#065f46' }}>Support Leo Planner</h3>
               </div>
               <p style={{ fontSize: '0.875rem', marginBottom: '1rem', color: '#374151' }}>
-                Help keep this app free, ad-free, and flying high! Like nectar for a hummingbird, your support keeps us going! 🌺
+                Help keep this app free, ad-free, and running strong! Your support helps us continue building great features! 🌺
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <a href="https://venmo.com/Nitin-Kumar-22" target="_blank" rel="noopener noreferrer" style={{ padding: '0.75rem', borderRadius: '0.75rem', background: 'linear-gradient(to right, #3b82f6, #06b6d4)', color: 'white', fontWeight: 'bold', textAlign: 'center', textDecoration: 'none', display: 'block' }}>
