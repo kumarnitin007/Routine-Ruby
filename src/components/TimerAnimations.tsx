@@ -85,7 +85,7 @@ const PacmanAnimation: React.FC<{ progress: number; remainingSeconds: number; to
               r={isEaten ? 0 : 4}
               fill={isEaten ? 'transparent' : '#ffd700'}
               opacity={isEaten ? 0 : 1}
-              transition="all 0.3s"
+              style={{ transition: 'all 0.3s' }}
             />
           );
         })}
@@ -104,7 +104,7 @@ const PacmanAnimation: React.FC<{ progress: number; remainingSeconds: number; to
               r={isEaten ? 0 : 8}
               fill={isEaten ? 'transparent' : '#ff6b6b'}
               opacity={isEaten ? 0 : 1}
-              transition="all 0.3s"
+              style={{ transition: 'all 0.3s' }}
             />
           );
         })}
