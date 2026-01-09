@@ -77,8 +77,27 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ onNavigate, onBackToDashboard
       } else if (task.frequency === 'monthly') {
         return task.dayOfMonth === dayOfMonth;
       } else if (task.frequency === 'count-based') {
-        // Count-based tasks show every day
-        return true;
+        // For count-based tasks, only show if not yet completed the required number of times in the period
+        if (task.frequencyCount && task.frequencyPeriod) {
+          // Get period bounds
+          let periodBounds;
+          if (task.frequencyPeriod === 'week') {
+            periodBounds = getWeekBounds(date);
+          } else {
+            periodBounds = getMonthBounds(date);
+          }
+          
+          // Count completions in this period
+          const completionsInPeriod = completions.filter(
+            c => c.taskId === task.id && 
+                 c.date >= periodBounds.start && 
+                 c.date <= periodBounds.end
+          ).length;
+          
+          // Only show if not yet completed the required number of times
+          return completionsInPeriod < task.frequencyCount;
+        }
+        return true; // Fallback: show if frequencyCount/frequencyPeriod not set
       } else if (task.frequency === 'custom') {
         if (task.customFrequency) {
           const monthMatch = task.customFrequency.match(/(\d+)(st|nd|rd|th)\s+of\s+every\s+month/i);
@@ -124,8 +143,12 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ onNavigate, onBackToDashboard
     const tasksForDay = getTasksForDate(date);
     if (tasksForDay.length === 0) return 0;
     
+    // Only count completions for tasks that should appear on this date
+    const tasksForDayIds = new Set(tasksForDay.map(t => t.id));
     const dateStr = formatDate(date);
-    const completedCount = completions.filter(c => c.date === dateStr).length;
+    const completedCount = completions.filter(
+      c => c.date === dateStr && tasksForDayIds.has(c.taskId)
+    ).length;
     
     return Math.round((completedCount / tasksForDay.length) * 100);
   };
@@ -260,7 +283,14 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ onNavigate, onBackToDashboard
                       title={`${completionRate}% complete`}
                     />
                     <div className="task-count">
-                      {getCompletionsForDate(day).length}/{tasksForDay.length} tasks
+                      {(() => {
+                        // Only count completions for tasks that should appear on this date
+                        const tasksForDayIds = new Set(tasksForDay.map(t => t.id));
+                        const relevantCompletions = getCompletionsForDate(day).filter(
+                          c => tasksForDayIds.has(c.taskId)
+                        );
+                        return `${relevantCompletions.length}/${tasksForDay.length} tasks`;
+                      })()}
                     </div>
                   </div>
                 )}
@@ -304,20 +334,33 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ onNavigate, onBackToDashboard
       </div>
 
       {/* Day Details Modal */}
-      {selectedDate && (
-        <DayDetailsModal
-          date={selectedDate}
-          tasks={getTasksForDate(new Date(selectedDate + 'T00:00:00'))}
-          events={events}
-          completedTaskIds={completedTaskIds}
-          onClose={() => setSelectedDate(null)}
-          onCompleteTask={async (taskId) => {
-            await completeTask(taskId, selectedDate);
-            setCompletedTaskIds(prev => new Set(prev).add(taskId));
-            await loadMonthData();
-          }}
-        />
-      )}
+      {selectedDate && (() => {
+        // Get actual completions for the selected date from the database
+        const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+        const actualCompletionsForDate = getCompletionsForDate(selectedDateObj);
+        const actualCompletedTaskIds = new Set(actualCompletionsForDate.map(c => c.taskId));
+        
+        // Merge with any in-memory completions (from modal interactions)
+        const mergedCompletedTaskIds = new Set([...actualCompletedTaskIds, ...completedTaskIds]);
+        
+        return (
+          <DayDetailsModal
+            date={selectedDate}
+            tasks={getTasksForDate(selectedDateObj)}
+            events={events}
+            completedTaskIds={mergedCompletedTaskIds}
+            onClose={() => {
+              setSelectedDate(null);
+              setCompletedTaskIds(new Set()); // Reset in-memory completions when modal closes
+            }}
+            onCompleteTask={async (taskId) => {
+              await completeTask(taskId, selectedDate);
+              setCompletedTaskIds(prev => new Set(prev).add(taskId));
+              await loadMonthData();
+            }}
+          />
+        );
+      })()}
     </div>
   );
 };

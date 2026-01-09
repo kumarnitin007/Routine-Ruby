@@ -286,79 +286,160 @@ const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
           )}
 
           {/* Tasks Section */}
-          {tasks.length > 0 ? (
-            <div>
-              <h3 style={{ 
-                fontSize: '1.1rem', 
-                fontWeight: 600, 
-                color: '#1f2937',
-                marginBottom: '1rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
-                ✅ Tasks
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {tasks.map((task) => {
-                  const isCompleted = completedTaskIds.has(task.id);
-                  return (
-                    <div
-                      key={task.id}
-                      style={{
-                        background: isCompleted 
-                          ? 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)'
-                          : 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
-                        border: `2px solid ${isCompleted ? '#10b981' : (task.color || '#667eea')}`,
-                        borderRadius: '12px',
-                        padding: '1rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '1rem'
-                      }}
-                    >
-                      {/* Show icon like events - no checkboxes unless in edit mode */}
-                      {canEdit ? (
-                        <input
-                          type="checkbox"
-                          checked={isCompleted}
-                          onChange={() => onCompleteTask(task.id)}
+          {tasks.length > 0 ? (() => {
+            const completedTasks = tasks.filter(task => completedTaskIds.has(task.id));
+            const incompleteTasks = tasks.filter(task => !completedTaskIds.has(task.id));
+            
+            return (
+              <div>
+                <h3 style={{ 
+                  fontSize: '1.1rem', 
+                  fontWeight: 600, 
+                  color: '#1f2937',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  ✅ Tasks ({completedTasks.length}/{tasks.length} completed)
+                </h3>
+                
+                {/* Incomplete Tasks Section */}
+                {incompleteTasks.length > 0 && (
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h4 style={{ 
+                      fontSize: '0.95rem', 
+                      fontWeight: 600, 
+                      color: '#6b7280',
+                      marginBottom: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      📋 Pending ({incompleteTasks.length})
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {incompleteTasks.map((task) => (
+                        <div
+                          key={task.id}
                           style={{
-                            width: '20px',
-                            height: '20px',
-                            cursor: 'pointer',
-                            flexShrink: 0
+                            background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
+                            border: `2px solid ${task.color || '#667eea'}`,
+                            borderRadius: '12px',
+                            padding: '1rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '1rem'
                           }}
-                        />
-                      ) : (
-                        <span style={{ fontSize: '2rem', flexShrink: 0 }}>
-                          {isCompleted ? '✅' : '📋'}
-                        </span>
-                      )}
-                      <div style={{ flex: 1 }}>
-                        <div style={{ 
-                          fontWeight: 600, 
-                          color: isCompleted ? '#6b7280' : '#1f2937',
-                          marginBottom: '0.25rem',
-                          textDecoration: isCompleted ? 'line-through' : 'none'
-                        }}>
-                          {task.name}
-                        </div>
-                        {task.description && (
-                          <div style={{ 
-                            fontSize: '0.875rem', 
-                            color: '#6b7280'
-                          }}>
-                            {task.description}
+                        >
+                          {canEdit ? (
+                            <input
+                              type="checkbox"
+                              checked={false}
+                              onChange={() => onCompleteTask(task.id)}
+                              style={{
+                                width: '20px',
+                                height: '20px',
+                                cursor: 'pointer',
+                                flexShrink: 0
+                              }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: '2rem', flexShrink: 0 }}>📋</span>
+                          )}
+                          <div style={{ flex: 1 }}>
+                            <div style={{ 
+                              fontWeight: 600, 
+                              color: '#1f2937',
+                              marginBottom: '0.25rem'
+                            }}>
+                              {task.name}
+                            </div>
+                            {task.description && (
+                              <div style={{ 
+                                fontSize: '0.875rem', 
+                                color: '#6b7280'
+                              }}>
+                                {task.description}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      ))}
                     </div>
-                  );
-                })}
+                  </div>
+                )}
+                
+                {/* Completed Tasks Section */}
+                {completedTasks.length > 0 && (
+                  <div>
+                    <h4 style={{ 
+                      fontSize: '0.95rem', 
+                      fontWeight: 600, 
+                      color: '#6b7280',
+                      marginBottom: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      ✅ Completed ({completedTasks.length})
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {completedTasks.map((task) => (
+                        <div
+                          key={task.id}
+                          style={{
+                            background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
+                            border: '2px solid #10b981',
+                            borderRadius: '12px',
+                            padding: '1rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '1rem',
+                            opacity: 0.85
+                          }}
+                        >
+                          {canEdit ? (
+                            <input
+                              type="checkbox"
+                              checked={true}
+                              onChange={() => onCompleteTask(task.id)}
+                              style={{
+                                width: '20px',
+                                height: '20px',
+                                cursor: 'pointer',
+                                flexShrink: 0
+                              }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: '2rem', flexShrink: 0 }}>✅</span>
+                          )}
+                          <div style={{ flex: 1 }}>
+                            <div style={{ 
+                              fontWeight: 600, 
+                              color: '#6b7280',
+                              marginBottom: '0.25rem',
+                              textDecoration: 'line-through'
+                            }}>
+                              {task.name}
+                            </div>
+                            {task.description && (
+                              <div style={{ 
+                                fontSize: '0.875rem', 
+                                color: '#6b7280'
+                              }}>
+                                {task.description}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          ) : !todayEvents.length && !upcomingReminders.length ? (
+            );
+          })() : !todayEvents.length && !upcomingReminders.length ? (
             <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#9ca3af' }}>
               <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📭</div>
               <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem' }}>No tasks or events</div>

@@ -8,9 +8,27 @@ import React, { useState } from 'react';
 import Portal from './Portal';
 
 // Version number and build time - injected at build time (static, not runtime)
-const APP_VERSION = (import.meta.env.APP_VERSION as string) || '1.0.0';
-const BUILD_DATE = (import.meta.env.BUILD_DATE as string) || new Date().toISOString().split('T')[0];
-const BUILD_TIME = (import.meta.env.BUILD_TIME as string) || new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+// In dev mode, read from package.json dynamically, otherwise use injected value
+let APP_VERSION = (import.meta.env.APP_VERSION as string) || '1.0.11';
+let BUILD_DATE = (import.meta.env.BUILD_DATE as string) || new Date().toISOString().split('T')[0];
+let BUILD_TIME = (import.meta.env.BUILD_TIME as string) || new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+
+// In dev mode, try to read from package.json for accurate version
+if (import.meta.env.DEV) {
+  try {
+    // Use dynamic import to read package.json (only works in dev)
+    fetch('/package.json')
+      .then(res => res.json())
+      .then(pkg => {
+        APP_VERSION = pkg.version || APP_VERSION;
+      })
+      .catch(() => {
+        // Fallback if fetch fails
+      });
+  } catch (e) {
+    // Ignore errors
+  }
+}
 
 interface AboutModalProps {
   show: boolean;
@@ -20,6 +38,25 @@ interface AboutModalProps {
 const AboutModal: React.FC<AboutModalProps> = ({ show, onClose }) => {
   const [isFeaturesExpanded, setIsFeaturesExpanded] = useState(false);
   const [isAppsExpanded, setIsAppsExpanded] = useState(false);
+  const [displayVersion, setDisplayVersion] = useState(APP_VERSION);
+  
+  // In dev mode, read version dynamically when modal opens
+  React.useEffect(() => {
+    if (import.meta.env.DEV && show) {
+      fetch('/package.json')
+        .then(res => res.json())
+        .then(pkg => {
+          if (pkg.version) {
+            setDisplayVersion(pkg.version);
+          }
+        })
+        .catch(() => {
+          setDisplayVersion(APP_VERSION);
+        });
+    } else {
+      setDisplayVersion(APP_VERSION);
+    }
+  }, [show]);
 
   if (!show) return null;
 
@@ -59,7 +96,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ show, onClose }) => {
               textAlign: 'center'
             }}>
               <div style={{ fontSize: '0.875rem', color: '#0f766e', fontWeight: 600 }}>
-                Version {APP_VERSION} • Built: {BUILD_DATE} {BUILD_TIME}
+                Version {displayVersion} • Built: {BUILD_DATE} {BUILD_TIME}
               </div>
             </div>
             {/* About */}

@@ -15,7 +15,6 @@ import { getTodayString, getTasksForToday, formatDate, getWeekBounds, getMonthBo
 import { loadData, completeTask, isTaskCompletedToday, getTaskSpilloversForDate, moveTaskToNextDay, getCompletionCountForPeriod, saveTaskOrder, loadTaskOrder, getUpcomingEvents, acknowledgeEvent, isEventAcknowledged } from './storage';
 import TaskActionModal from './TaskActionModal';
 import CountdownTimer from './components/CountdownTimer';
-import ImportantDatesSection from './components/ImportantDatesSection';
 import ProgressAndReviewModal from './components/ProgressAndReviewModal';
 import SmartCoachSection from './components/SmartCoachSection';
 import { getUnderperformingTasks, isInsightDismissed, TaskInsight } from './services/aiInsights';
@@ -38,6 +37,7 @@ type DashboardItem = {
   weightage: number;
   color?: string;
   daysUntil?: number;
+  eventDate?: string; // Formatted event date for display
 };
 
 interface TodayViewProps {
@@ -48,7 +48,6 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
   const { user, loading: authLoading } = useAuth();
   const [viewMode, setViewMode] = useState<'dashboard' | 'monthly'>('dashboard');
   const [items, setItems] = useState<DashboardItem[]>([]);
-  const [events, setEvents] = useState<DashboardItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<DashboardItem | null>(null);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -203,7 +202,32 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
       setAppData(data); // Store data in state
       
       // Get tasks for selected date (not just today)
-      const dateTasks = data.tasks.filter(task => shouldTaskShowOnDate(task, selectedDate));
+      let dateTasks = data.tasks.filter(task => shouldTaskShowOnDate(task, selectedDate));
+      
+      // Filter out count-based tasks that have already been completed the required number of times
+      const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+      dateTasks = dateTasks.filter(task => {
+        if (task.frequency === 'count-based' && task.frequencyCount && task.frequencyPeriod) {
+          // Get period bounds
+          let periodBounds;
+          if (task.frequencyPeriod === 'week') {
+            periodBounds = getWeekBounds(selectedDateObj);
+          } else {
+            periodBounds = getMonthBounds(selectedDateObj);
+          }
+          
+          // Count completions in this period
+          const completionsInPeriod = data.completions.filter(
+            c => c.taskId === task.id && 
+                 c.date >= periodBounds.start && 
+                 c.date <= periodBounds.end
+          ).length;
+          
+          // Only show if not yet completed the required number of times
+          return completionsInPeriod < task.frequencyCount;
+        }
+        return true; // Show all non-count-based tasks
+      });
       
       // Get spillover tasks
       const spillovers = await getTaskSpilloversForDate(selectedDate);
@@ -214,8 +238,8 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
       const allTaskIds = new Set([...dateTasks.map(t => t.id), ...spilloverTasks.map(t => t.id)]);
       let combinedTasks = data.tasks.filter(t => allTaskIds.has(t.id));
       
-      // Get events for selected date (show events on that day or upcoming)
-      const upcomingEvents = (await getUpcomingEvents(3)).filter(({ event }) => !event.hideFromDashboard);
+      // Get events for selected date (show events on that specific date)
+      const upcomingEvents = (await getUpcomingEvents(0, selectedDate)).filter(({ event }) => !event.hideFromDashboard);
       
       // Convert tasks to dashboard items
       const taskItems: DashboardItem[] = combinedTasks.map(task => ({
@@ -230,7 +254,22 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
         color: task.color
       }));
     
-    // Convert events to dashboard items
+    // Helper function to format event date for display
+    const formatEventDateForCard = (event: Event): string => {
+      if (event.frequency === 'yearly') {
+        const [month, day] = event.date.split('-');
+        const date = new Date(2000, parseInt(month) - 1, parseInt(day));
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      } else {
+        return new Date(event.date).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          year: 'numeric'
+        });
+      }
+    };
+    
+    // Convert events to dashboard items (same as tasks, no special treatment)
     const eventItems: DashboardItem[] = upcomingEvents.map(({ event, daysUntil }) => ({
       type: 'event',
       event,
@@ -241,14 +280,12 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
       isCompleted: isEventAcknowledged(event.id, selectedDate),
       weightage: event.priority || 5,
       color: event.color,
-      daysUntil
+      daysUntil,
+      eventDate: formatEventDateForCard(event) // Add formatted event date
     }));
     
-    // Set events separately (for collapsible section)
-    setEvents(eventItems);
-    
-    // Only use tasks for main dashboard
-    let allItems = [...taskItems];
+    // Combine tasks and events into main dashboard items
+    let allItems = [...taskItems, ...eventItems];
     
     // Apply custom order if exists (only for tasks)
     const savedOrder = loadTaskOrder();
@@ -694,9 +731,9 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
 
 
   const calculateProgress = () => {
-    const totalItems = items.length + events.length;
+    const totalItems = items.length;
     if (totalItems === 0) return 0;
-    const completedItems = items.filter(i => i.isCompleted).length + events.filter(e => e.isCompleted).length;
+    const completedItems = items.filter(i => i.isCompleted).length;
     return Math.round((completedItems / totalItems) * 100);
   };
 
@@ -934,7 +971,7 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
         </div>
         <div style={{ display: 'flex', gap: '2rem', alignItems: 'center', justifyContent: 'center', marginTop: '1rem', flexWrap: 'wrap' }}>
           <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white' }}>
-            Progress: {calculateProgress()}% ({items.filter(i => i.isCompleted).length + events.filter(e => e.isCompleted).length}/{items.length + events.length} completed)
+            Progress: {calculateProgress()}% ({items.filter(i => i.isCompleted).length}/{items.length} completed)
           </div>
           {currentStreak > 0 && (
             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -945,13 +982,6 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* Important Dates Section */}
-      <ImportantDatesSection 
-        events={events}
-        onEventClick={handleItemClick}
-        collapsed={false}
-      />
-
       {isReorderMode && (
         <div className="reorder-instructions" style={{ background: '#eff6ff', border: '2px solid #3b82f6', borderRadius: '12px', padding: '1rem', marginBottom: '1.5rem', textAlign: 'center' }}>
           <p style={{ margin: 0, color: '#1e40af', fontWeight: 600 }}>
@@ -960,7 +990,7 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
         </div>
       )}
 
-      {items.length === 0 && events.length === 0 ? (
+      {items.length === 0 ? (
         <div className="no-tasks">
           <h3>No tasks or events scheduled for today</h3>
           <p>Start by adding some tasks to track your daily goals</p>
@@ -991,25 +1021,52 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
               return 0; // keep original order for items with same completion status
             })
             .map((item, index) => {
-              const isSomber = item.type === 'event' && ['Death Anniversary', 'Memorial', 'Remembrance'].includes(item.category || '');
-              const progress = item.type === 'task' && item.task ? getTaskProgress(item.task) : null;
-              const isCountBasedComplete = progress && progress.current >= progress.target;
+            const progress = item.type === 'task' && item.task ? getTaskProgress(item.task) : null;
+            const isCountBasedComplete = progress && progress.current >= progress.target;
             const taskStreak = item.type === 'task' ? getTaskStreak(item.id) : 0;
             const missedCount = item.type === 'task' ? getTaskMissedCount(item.id) : 0;
             
-            // Get category icon for events
+            // Get category icon for both tasks and events
             const getCategoryIcon = () => {
+              const eventIcons: { [key: string]: string } = {
+                'Birthday': '🎂',
+                'Anniversary': '💝',
+                'Holiday': '🎊',
+                'Special Event': '⭐',
+                'Death Anniversary': '🕯️',
+                'Memorial': '🌹',
+                'Remembrance': '🙏',
+                'Wedding': '💍',
+                'Graduation': '🎓'
+              };
+              
+              const taskIcons: { [key: string]: string } = {
+                'Exercise': '🏃',
+                'Study': '📚',
+                'Work': '💼',
+                'Health': '💊',
+                'Self Care': '🧘',
+                'Household': '🏠',
+                'Social': '👥',
+                'Hobby': '🎨',
+                'Finance': '💰',
+                'Travel': '✈️',
+                'Shopping': '🛒',
+                'Cooking': '👨‍🍳',
+                'Reading': '📖',
+                'Writing': '✍️',
+                'Music': '🎵',
+                'Sports': '⚽',
+                'Gaming': '🎮',
+                'Learning': '🎓',
+                'Meditation': '🧘',
+                'Yoga': '🧘‍♀️'
+              };
+              
               if (item.type === 'event') {
-                const icons: { [key: string]: string } = {
-                  'Birthday': '🎂',
-                  'Anniversary': '💝',
-                  'Holiday': '🎊',
-                  'Special Event': '⭐',
-                  'Death Anniversary': '🕯️',
-                  'Memorial': '🌹',
-                  'Remembrance': '🙏'
-                };
-                return icons[item.category || ''] || '📅';
+                return eventIcons[item.category || ''] || '📅';
+              } else if (item.type === 'task') {
+                return taskIcons[item.category || ''] || '📋';
               }
               return '';
             };
@@ -1025,7 +1082,7 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
             return (
               <div
                 key={item.id}
-                className={`task-card ${item.isCompleted || isCountBasedComplete ? 'completed' : ''} ${isReorderMode ? 'reorder-mode' : ''} ${isSomber ? 'somber-event' : ''} ${priorityClass} ${extraClasses}`}
+                className={`task-card ${item.isCompleted || isCountBasedComplete ? 'completed' : ''} ${isReorderMode ? 'reorder-mode' : ''} ${priorityClass} ${extraClasses}`}
                 style={{
                   ...getItemStyle(item),
                   cursor: isReorderMode ? 'move' : 'pointer',
@@ -1083,7 +1140,38 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
                   </div>
                 )}
                 <div>
-                  {/* Priority Badge */}
+                  {/* Source Badge (Event/Task) - Top Left */}
+                  {!isReorderMode && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '0.75rem',
+                      left: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      background: item.type === 'event' ? '#ec489915' : '#3b82f615',
+                      border: `1.5px solid ${item.type === 'event' ? '#ec4899' : '#3b82f6'}`,
+                      borderRadius: '12px',
+                      padding: '0.25rem 0.5rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: item.type === 'event' ? '#ec4899' : '#3b82f6',
+                      zIndex: 5
+                    }}>
+                      <span>{item.type === 'event' ? '📅' : '✓'}</span>
+                      <span>{item.type === 'event' ? 'Event' : 'Task'}</span>
+                      {/* Recurring indicator */}
+                      {((item.type === 'event' && item.event && 
+                         (item.event.frequency === 'yearly' || item.event.frequency === 'custom')) ||
+                        (item.type === 'task' && item.task && 
+                         (['daily', 'weekly', 'monthly', 'count-based', 'interval'].includes(item.task.frequency) ||
+                          (item.task.frequency === 'custom' && !item.task.specificDate)))) && (
+                        <span style={{ fontSize: '0.7rem', marginLeft: '0.15rem' }} title="Recurring">🔄</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Priority Badge - Top Right */}
                   {!isReorderMode && item.weightage >= 7 && !item.task?.onHold && (
                     <div style={{
                       position: 'absolute',
@@ -1098,7 +1186,8 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
                       padding: '0.25rem 0.5rem',
                       fontSize: '0.75rem',
                       fontWeight: 600,
-                      color: getPriorityStyle(item.weightage).badgeColor
+                      color: getPriorityStyle(item.weightage).badgeColor,
+                      zIndex: 5
                     }}>
                       <span>{getPriorityStyle(item.weightage).badge}</span>
                       <span>{getPriorityStyle(item.weightage).badgeText}</span>
@@ -1132,31 +1221,23 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
                     </div>
                   )}
                   
-                  {/* Event icon for events */}
-                  {item.type === 'event' && (
-                    <div style={{ fontSize: '2.5rem', textAlign: 'center', marginBottom: '0.5rem' }}>
-                      {getCategoryIcon()}
-                    </div>
-                  )}
+                  {/* Category icon for both tasks and events */}
+                  <div style={{ fontSize: '2.5rem', textAlign: 'center', marginBottom: '0.5rem' }}>
+                    {getCategoryIcon()}
+                  </div>
                   
-                  <div className="task-name">{item.name}</div>
-                  
-                  {/* Days until badge for events */}
-                  {item.type === 'event' && item.daysUntil !== undefined && (
-                    <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-                      {item.daysUntil === 0 ? (
-                        <div className={isSomber ? 'event-today-badge-somber' : 'event-today-badge'}>
-                          {isSomber ? 'Today' : 'TODAY! 🎊'}
-                        </div>
-                      ) : (
-                        <div className="event-soon-badge">in {item.daysUntil} day{item.daysUntil > 1 ? 's' : ''}</div>
-                      )}
-                    </div>
-                  )}
+                  <div className="task-name">
+                    {item.name}
+                    {item.type === 'event' && item.eventDate && (
+                      <span style={{ fontSize: '0.85em', color: '#6b7280', fontWeight: 'normal', marginLeft: '0.5rem' }}>
+                        ({item.eventDate})
+                      </span>
+                    )}
+                  </div>
                   
                   {item.category && (
                     <div className="task-category">
-                      {item.type === 'task' ? '📁' : ''} {item.category}
+                      {item.category}
                     </div>
                   )}
                   {progress && (
@@ -1167,23 +1248,31 @@ const TodayView: React.FC<TodayViewProps> = ({ onNavigate }) => {
                     </div>
                   )}
                   
-                  {/* Task Stats Badges (only for tasks) */}
-                  {item.type === 'task' && (
-                    <div className="task-stats">
-                      {taskStreak > 0 && (
-                        <div className="task-stat-badge streak-badge">
-                          <span className="badge-icon">🔥</span>
-                          <span className="badge-text">{taskStreak} day{taskStreak > 1 ? 's' : ''} streak</span>
-                        </div>
-                      )}
-                      {missedCount > 0 && (
-                        <div className="task-stat-badge missed-badge">
-                          <span className="badge-icon">❌</span>
-                          <span className="badge-text">{missedCount} missed in last 7 days</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {/* Stats Badges (for both tasks and events) */}
+                  <div className="task-stats">
+                    {/* Task stats */}
+                    {item.type === 'task' && taskStreak > 0 && (
+                      <div className="task-stat-badge streak-badge">
+                        <span className="badge-icon">🔥</span>
+                        <span className="badge-text">{taskStreak} day{taskStreak > 1 ? 's' : ''} streak</span>
+                      </div>
+                    )}
+                    {item.type === 'task' && missedCount > 0 && (
+                      <div className="task-stat-badge missed-badge">
+                        <span className="badge-icon">❌</span>
+                        <span className="badge-text">{missedCount} missed in last 7 days</span>
+                      </div>
+                    )}
+                    {/* Event days until badge */}
+                    {item.type === 'event' && item.daysUntil !== undefined && (
+                      <div className={`task-stat-badge ${item.daysUntil === 0 ? 'event-today-badge' : 'event-upcoming-badge'}`}>
+                        <span className="badge-icon">{item.daysUntil === 0 ? '🎊' : '📅'}</span>
+                        <span className="badge-text">
+                          {item.daysUntil === 0 ? 'Today' : `in ${item.daysUntil} day${item.daysUntil > 1 ? 's' : ''}`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="task-weightage">
                   Priority: {item.weightage}/10

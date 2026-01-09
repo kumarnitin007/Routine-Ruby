@@ -245,57 +245,193 @@ export const getTaskHistory = getCompletions;
 
 // ===== EVENTS =====
 
+/**
+ * Generate reminder records for an event based on notifyDaysBefore
+ * Reminder dates follow the same pattern as event dates:
+ * - MM-DD format for yearly events
+ * - YYYY-MM-DD format for one-time events
+ */
+const generateEventReminders = async (event: Event, eventId: string): Promise<void> => {
+  if (!event.notifyDaysBefore || event.notifyDaysBefore === 0) return;
+  
+  const { client, userId } = await requireAuth();
+  
+  // Delete existing reminders for this event
+  await client
+    .from('myday_notifybeforedays')
+    .delete()
+    .eq('event_id', eventId);
+  
+  const reminders: Array<{ reminder_date: string; days_until_event: number }> = [];
+  
+  if (event.frequency === 'yearly') {
+    // For yearly events: Generate reminders for the upcoming occurrence only
+    // Since reminder_date is stored as MM-DD (same pattern as event), we only need one set
+    
+    // Normalize date format: handle both MM-DD and YYYY-MM-DD formats
+    let month: number, day: number;
+    const dateParts = event.date.split('-').map(Number);
+    
+    if (dateParts.length === 3) {
+      // YYYY-MM-DD format: extract month and day
+      [, month, day] = dateParts; // Skip year, get month and day
+    } else if (dateParts.length === 2) {
+      // MM-DD format: use as-is
+      [month, day] = dateParts;
+    } else {
+      console.error('Invalid date format for yearly event:', event.date);
+      return; // Skip reminder generation if date format is invalid
+    }
+    
+    // Validate month and day
+    if (isNaN(month) || isNaN(day) || month < 1 || month > 12 || day < 1 || day > 31) {
+      console.error('Invalid month or day for yearly event:', event.date, 'month:', month, 'day:', day);
+      return; // Skip reminder generation if values are invalid
+    }
+    
+    // Calculate the next occurrence of this event
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const currentYear = today.getFullYear();
+    let eventDate = new Date(currentYear, month - 1, day);
+    eventDate.setHours(0, 0, 0, 0);
+    
+    // If event already passed this year, use next year
+    if (eventDate < today) {
+      eventDate = new Date(currentYear + 1, month - 1, day);
+      eventDate.setHours(0, 0, 0, 0);
+    }
+    
+    // Generate reminder dates (1 to notifyDaysBefore days before event)
+    // Store as MM-DD format to match event pattern
+    for (let d = 1; d <= event.notifyDaysBefore; d++) {
+      const reminderDate = new Date(eventDate);
+      reminderDate.setDate(reminderDate.getDate() - d);
+      const reminderDateStr = `${String(reminderDate.getMonth() + 1).padStart(2, '0')}-${String(reminderDate.getDate()).padStart(2, '0')}`;
+      reminders.push({ reminder_date: reminderDateStr, days_until_event: d });
+    }
+  } else if (event.frequency === 'one-time') {
+    // For one-time events: Generate reminders for that specific date
+    const eventDate = new Date(event.date + 'T00:00:00');
+    
+    for (let d = 1; d <= event.notifyDaysBefore; d++) {
+      const reminderDate = new Date(eventDate);
+      reminderDate.setDate(reminderDate.getDate() - d);
+      const reminderDateStr = reminderDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      reminders.push({ reminder_date: reminderDateStr, days_until_event: d });
+    }
+  }
+  
+  // Insert reminder records
+  if (reminders.length > 0) {
+    const reminderRecords = reminders.map(r => ({
+      user_id: userId,
+      event_id: eventId,
+      reminder_date: r.reminder_date,
+      days_until_event: r.days_until_event,
+      frequency: event.frequency
+    }));
+    
+    const { error } = await client
+      .from('myday_notifybeforedays')
+      .insert(reminderRecords);
+    
+    if (error) {
+      console.error('Error generating reminders:', error);
+      throw error;
+    }
+  }
+};
+
 export const getEvents = async (): Promise<Event[]> => {
   const { client } = await requireAuth();
 
+  // Select all columns including date_text (from migration)
+  // Note: 'date' column doesn't exist, use date_text or event_date
   const { data, error } = await client
     .from('myday_events')
-    .select('*')
-    .order('event_date', { ascending: true });
+    .select('id, name, description, category, tags, date_text, event_date, frequency, custom_frequency, year, notify_days_before, color, priority, hide_from_dashboard, created_at')
+    .order('date_text', { ascending: true, nullsFirst: true })
+    .order('event_date', { ascending: true, nullsFirst: true });
 
   if (error) {
     console.error('Error fetching events:', error);
     return [];
   }
 
-  return (data || []).map(event => ({
-    id: event.id,
-    name: event.name,
-    description: event.description,
-    category: event.category,
-    tags: event.tags || [],
-    date: event.event_date,
-    frequency: event.frequency || 'yearly',
-    customFrequency: event.custom_frequency,
-    year: event.year,
-    notifyDaysBefore: event.notify_days_before || 0,
-    color: event.color,
-    priority: event.priority || 5,
-    hideFromDashboard: event.hide_from_dashboard || false,
-    createdAt: event.created_at || new Date().toISOString()
-  }));
+  return (data || []).map(event => {
+    // Use date_text if available (from migration), fall back to event_date
+    // date_text is preferred as it supports MM-DD format for yearly events
+    let eventDate = event.date_text || event.event_date;
+    
+    return {
+      id: event.id,
+      name: event.name,
+      description: event.description,
+      category: event.category,
+      tags: event.tags || [],
+      date: eventDate,
+      frequency: event.frequency || 'yearly',
+      customFrequency: event.custom_frequency,
+      year: event.year,
+      notifyDaysBefore: event.notify_days_before || 0,
+      color: event.color,
+      priority: event.priority || 5,
+      hideFromDashboard: event.hide_from_dashboard || false,
+      createdAt: event.created_at || new Date().toISOString()
+    };
+  });
 };
 
 export const addEvent = async (event: Event): Promise<void> => {
   const { client, userId } = await requireAuth();
+  const eventId = generateUUID();
 
+  // Normalize date format based on frequency
+  let normalizedDate = event.date;
+  if (event.frequency === 'yearly') {
+    // For yearly events, ensure date is in MM-DD format
+    const dateParts = event.date.split('-').map(Number);
+    if (dateParts.length === 3) {
+      // YYYY-MM-DD format: convert to MM-DD
+      const [, month, day] = dateParts;
+      normalizedDate = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    } else if (dateParts.length === 2) {
+      // Already in MM-DD format
+      normalizedDate = event.date;
+    }
+  }
+  // For one-time events, keep YYYY-MM-DD format
+
+  // Insert event
   const { error } = await client
     .from('myday_events')
     .insert([{
-      id: generateUUID(),
+      id: eventId,
       user_id: userId,
       name: event.name,
       description: event.description,
       category: event.category,
-      event_date: event.date,
-      notify_days_before: event.notifyDaysBefore,
+      tags: event.tags || [],
+      event_date: normalizedDate,
+      date_text: normalizedDate, // Store in date_text for consistency
+      notify_days_before: event.notifyDaysBefore || 0,
       color: event.color,
-      priority: event.priority,
-      hide_from_dashboard: event.hideFromDashboard,
-      frequency: 'yearly' // Default frequency
+      priority: event.priority || 5,
+      hide_from_dashboard: event.hideFromDashboard || false,
+      frequency: event.frequency || 'yearly',
+      custom_frequency: event.customFrequency,
+      year: event.year
     }]);
 
   if (error) throw error;
+  
+  // Generate reminders if notifyDaysBefore > 0
+  // Use normalized date for reminder generation
+  if (event.notifyDaysBefore && event.notifyDaysBefore > 0) {
+    const eventWithNormalizedDate = { ...event, date: normalizedDate };
+    await generateEventReminders(eventWithNormalizedDate, eventId);
+  }
 };
 
 export const updateEvent = async (eventId: string, updates: Partial<Event>): Promise<void> => {
@@ -305,11 +441,18 @@ export const updateEvent = async (eventId: string, updates: Partial<Event>): Pro
   if (updates.name !== undefined) dbUpdates.name = updates.name;
   if (updates.description !== undefined) dbUpdates.description = updates.description;
   if (updates.category !== undefined) dbUpdates.category = updates.category;
-  if (updates.date !== undefined) dbUpdates.event_date = updates.date;
+  if (updates.tags !== undefined) dbUpdates.tags = updates.tags;
+  if (updates.date !== undefined) {
+    dbUpdates.event_date = updates.date;
+    dbUpdates.date_text = updates.date; // Update both for consistency
+  }
   if (updates.notifyDaysBefore !== undefined) dbUpdates.notify_days_before = updates.notifyDaysBefore;
   if (updates.color !== undefined) dbUpdates.color = updates.color;
   if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
   if (updates.hideFromDashboard !== undefined) dbUpdates.hide_from_dashboard = updates.hideFromDashboard;
+  if (updates.frequency !== undefined) dbUpdates.frequency = updates.frequency;
+  if (updates.customFrequency !== undefined) dbUpdates.custom_frequency = updates.customFrequency;
+  if (updates.year !== undefined) dbUpdates.year = updates.year;
 
   const { error } = await client
     .from('myday_events')
@@ -317,6 +460,18 @@ export const updateEvent = async (eventId: string, updates: Partial<Event>): Pro
     .eq('id', eventId);
 
   if (error) throw error;
+  
+  // If date or notifyDaysBefore changed, regenerate reminders
+  if (updates.date !== undefined || updates.notifyDaysBefore !== undefined || updates.frequency !== undefined) {
+    // Get full event to regenerate reminders
+    const events = await getEvents();
+    const fullEvent = events.find(e => e.id === eventId);
+    if (fullEvent) {
+      // Merge updates into full event
+      const updatedEvent = { ...fullEvent, ...updates };
+      await generateEventReminders(updatedEvent, eventId);
+    }
+  }
 };
 
 export const deleteEvent = async (eventId: string): Promise<void> => {
@@ -798,31 +953,196 @@ export const loadTaskOrder = (): string[] => {
   return [];
 };
 
-export const getUpcomingEvents = async (daysAhead: number = 7): Promise<Array<{ event: Event; date: string; daysUntil: number }>> => {
-  const events = await getEvents();
+export const getUpcomingEvents = async (daysAhead: number = 7, baseDate?: string): Promise<Array<{ event: Event; date: string; daysUntil: number }>> => {
+  const { client, userId } = await requireAuth();
   const today = new Date();
-  const upcoming: Array<{ event: Event; date: string; daysUntil: number }> = [];
+  today.setHours(0, 0, 0, 0);
   
-  for (let i = 0; i <= daysAhead; i++) {
-    const checkDate = new Date(today);
-    checkDate.setDate(today.getDate() + i);
-    const dateStr = checkDate.toISOString().split('T')[0];
-    
-    events.forEach(event => {
-      const eventDate = new Date(event.date);
-      const daysDiff = Math.floor((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  // Use baseDate if provided (for selected date navigation), otherwise use today
+  const selectedDate = baseDate || today.toISOString().split('T')[0];
+  const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+  const mmdd = `${String(selectedDateObj.getMonth() + 1).padStart(2, '0')}-${String(selectedDateObj.getDate()).padStart(2, '0')}`;
+  
+  // Query reminders table for the selected date
+  // Match MM-DD for yearly events or YYYY-MM-DD for one-time events
+  const { data: reminders, error } = await client
+    .from('myday_notifybeforedays')
+    .select(`
+      *,
+      event:myday_events(*)
+    `)
+    .eq('user_id', userId)
+    .or(`reminder_date.eq.${mmdd},reminder_date.eq.${selectedDate}`);
+  
+  if (error) {
+    console.error('Error fetching reminders:', error);
+    // Fallback to old logic if table doesn't exist yet
+    return getUpcomingEventsLegacy(daysAhead, baseDate);
+  }
+  
+  // Also check for events on the actual date (not just reminders)
+  const events = await getEvents();
+  const upcoming: Array<{ event: Event; date: string; daysUntil: number }> = [];
+  const seenEventIds = new Set<string>();
+  
+  // Process reminders
+  if (reminders && reminders.length > 0) {
+    reminders.forEach((reminder: any) => {
+      const eventData = reminder.event;
+      if (!eventData || eventData.hide_from_dashboard) return;
       
-      if (daysDiff >= 0 && daysDiff <= (event.notifyDaysBefore || 7)) {
-        upcoming.push({
-          event,
-          date: dateStr,
-          daysUntil: daysDiff
-        });
+      // Match by frequency pattern
+      const matches = (reminder.frequency === 'yearly' && reminder.reminder_date === mmdd) ||
+                     (reminder.frequency === 'one-time' && reminder.reminder_date === selectedDate);
+      
+      if (matches) {
+        const eventKey = `${eventData.id}-${reminder.reminder_date}-${reminder.days_until_event}`;
+        if (!seenEventIds.has(eventKey)) {
+          seenEventIds.add(eventKey);
+          
+          // Map database event to Event type
+          const event: Event = {
+            id: eventData.id,
+            name: eventData.name,
+            description: eventData.description,
+            category: eventData.category,
+            tags: eventData.tags || [],
+            date: eventData.date_text || eventData.event_date,
+            frequency: eventData.frequency || 'yearly',
+            customFrequency: eventData.custom_frequency,
+            year: eventData.year,
+            notifyDaysBefore: eventData.notify_days_before || 0,
+            color: eventData.color,
+            priority: eventData.priority || 5,
+            hideFromDashboard: eventData.hide_from_dashboard || false,
+            createdAt: eventData.created_at || new Date().toISOString()
+          };
+          
+          upcoming.push({
+            event,
+            date: reminder.reminder_date,
+            daysUntil: reminder.days_until_event
+          });
+        }
       }
     });
   }
   
-  return upcoming;
+  // Also check for events on the actual date (not just reminders)
+  events.forEach(event => {
+    if (event.hideFromDashboard) return;
+    
+    let eventDate: Date;
+    let eventDateStr: string;
+    
+    if (event.frequency === 'yearly') {
+      const [eventMonth, eventDay] = event.date.split('-').map(Number);
+      const baseMonth = selectedDateObj.getMonth() + 1;
+      const baseDay = selectedDateObj.getDate();
+      
+      // Check if event is on the selected date
+      if (eventMonth === baseMonth && eventDay === baseDay) {
+        const eventKey = `${event.id}-${selectedDate}-0`;
+        if (!seenEventIds.has(eventKey)) {
+          seenEventIds.add(eventKey);
+          upcoming.push({
+            event,
+            date: selectedDate,
+            daysUntil: 0 // TODAY!
+          });
+        }
+      }
+    } else if (event.frequency === 'one-time') {
+      if (event.date === selectedDate) {
+        const eventKey = `${event.id}-${selectedDate}-0`;
+        if (!seenEventIds.has(eventKey)) {
+          seenEventIds.add(eventKey);
+          upcoming.push({
+            event,
+            date: selectedDate,
+            daysUntil: 0 // TODAY!
+          });
+        }
+      }
+    }
+  });
+  
+  // Sort by daysUntil (today/selected date first, then upcoming)
+  return upcoming.sort((a, b) => a.daysUntil - b.daysUntil);
+};
+
+// Legacy function as fallback (old complex logic)
+const getUpcomingEventsLegacy = async (daysAhead: number = 7, baseDate?: string): Promise<Array<{ event: Event; date: string; daysUntil: number }>> => {
+  const events = await getEvents();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const base = baseDate ? new Date(baseDate + 'T00:00:00') : today;
+  base.setHours(0, 0, 0, 0);
+  
+  const upcoming: Array<{ event: Event; date: string; daysUntil: number }> = [];
+  const seenEventIds = new Set<string>();
+  
+  events.forEach(event => {
+    if (event.hideFromDashboard) return;
+    const notifyDays = event.notifyDaysBefore || 7;
+    let eventDate: Date;
+    let eventDateStr: string;
+    
+    if (event.frequency === 'yearly') {
+      eventDateStr = event.date;
+      if (!eventDateStr || !eventDateStr.includes('-')) return;
+      const [eventMonth, eventDay] = eventDateStr.split('-').map(Number);
+      if (isNaN(eventMonth) || isNaN(eventDay)) return;
+      const currentYear = base.getFullYear();
+      eventDate = new Date(currentYear, eventMonth - 1, eventDay);
+      eventDate.setHours(0, 0, 0, 0);
+      const baseMonth = base.getMonth() + 1;
+      const baseDay = base.getDate();
+      const eventMatchesToday = (eventMonth === baseMonth && eventDay === baseDay);
+      if (eventMatchesToday) {
+        eventDate = new Date(base);
+        eventDate.setHours(0, 0, 0, 0);
+      } else {
+        const daysDiff = Math.floor((eventDate.getTime() - base.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysDiff < 0) {
+          eventDate = new Date(currentYear + 1, eventMonth - 1, eventDay);
+          eventDate.setHours(0, 0, 0, 0);
+        }
+      }
+    } else if (event.frequency === 'one-time') {
+      eventDateStr = event.date;
+      eventDate = new Date(eventDateStr + 'T00:00:00');
+      if (isNaN(eventDate.getTime())) return;
+      eventDate.setHours(0, 0, 0, 0);
+    } else {
+      return;
+    }
+    
+    const daysUntil = Math.floor((eventDate.getTime() - base.getTime()) / (1000 * 60 * 60 * 24));
+    const daysUntilFromToday = Math.floor((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const shouldShow = daysUntilFromToday >= 0 && (
+      daysUntil === 0 ||
+      (daysUntil > 0 && daysUntil <= notifyDays) ||
+      (daysUntil < 0 && daysUntil >= -notifyDays)
+    );
+    
+    if (shouldShow) {
+      const eventDateStrForKey = event.frequency === 'yearly' 
+        ? `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`
+        : eventDateStr;
+      const eventKey = `${event.id}-${eventDateStrForKey}-${daysUntil}`;
+      if (!seenEventIds.has(eventKey)) {
+        seenEventIds.add(eventKey);
+        upcoming.push({
+          event,
+          date: eventDateStrForKey,
+          daysUntil: daysUntil === 0 ? 0 : daysUntil
+        });
+      }
+    }
+  });
+  
+  return upcoming.sort((a, b) => a.daysUntil - b.daysUntil);
 };
 
 const EVENT_ACK_KEY = 'routine-ruby-event-acknowledgments';

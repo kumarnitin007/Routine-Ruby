@@ -110,23 +110,35 @@ const AppContent: React.FC = () => {
   // Listen for storage changes (e.g., from another tab)
   // Only refresh on specific key changes to avoid unnecessary refreshes
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    
     const handleStorageChange = (e: StorageEvent) => {
       // Only refresh if it's a meaningful change from another tab
-      // Skip if it's the same window (storage event only fires for other tabs anyway)
+      // Storage events only fire for OTHER tabs/windows, not the current one
       if (e.key && (
         e.key.includes('user-settings') || 
         e.key.includes('theme') ||
         e.key.includes('onboarding')
       )) {
-        // Debounce rapid changes
-        setTimeout(() => {
+        // Clear any pending refresh
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        // Debounce rapid changes (increased to 500ms to reduce unnecessary refreshes)
+        timeoutId = setTimeout(() => {
           setKey(prev => prev + 1);
-        }, 100);
+          timeoutId = null;
+        }, 500);
       }
     };
 
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, []);
 
   const renderView = () => {

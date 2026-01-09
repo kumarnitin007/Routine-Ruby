@@ -199,15 +199,9 @@ export const convertICalEventsToEvents = (icalEvents: ICalEvent[]): Omit<Event, 
         }
       }
       
-      // Set default notification days based on category
+      // Set default notification days to 3 for all categories (bulk upload default)
       if (notifyDaysBefore === 0) {
-        if (category === 'Birthday' || category === 'Anniversary') {
-          notifyDaysBefore = 3;
-        } else if (category === 'Death Anniversary' || category === 'Memorial') {
-          notifyDaysBefore = 1;
-        } else {
-          notifyDaysBefore = 7;
-        }
+        notifyDaysBefore = 3;
       }
       
       events.push({

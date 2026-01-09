@@ -18,6 +18,11 @@ const buildTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: 
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    hmr: {
+      overlay: true, // Show errors in browser overlay
+    },
+  },
   define: {
     'import.meta.env.APP_VERSION': JSON.stringify(appVersion),
     'import.meta.env.BUILD_DATE': JSON.stringify(buildDate),

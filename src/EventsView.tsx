@@ -18,9 +18,11 @@ import {
   updateEvent, 
   deleteEvent,
   getUpcomingEvents,
-  importSampleEvents 
+  importSampleEvents,
+  getTags
 } from './storage';
 import { importFromICalendar, filterPersonalEvents } from './icalParser';
+import { Tag } from './types';
 
 interface EventsViewProps {
   onNavigate?: (view: string) => void;
@@ -37,6 +39,9 @@ const EventsView: React.FC<EventsViewProps> = () => {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterFrequency, setFilterFrequency] = useState<string>('all');
   const [searchText, setSearchText] = useState('');
+  const [sortBy, setSortBy] = useState<string>('date-asc');
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -48,12 +53,23 @@ const EventsView: React.FC<EventsViewProps> = () => {
     notifyDaysBefore: 0,
     priority: 5,
     hideFromDashboard: false,
-    color: '#667eea'
+    color: '#667eea',
+    tags: [] as string[]
   });
 
   useEffect(() => {
     loadEvents();
+    loadTags();
   }, []);
+
+  const loadTags = async () => {
+    try {
+      const allTags = await getTags();
+      setTags(allTags);
+    } catch (error) {
+      console.error('Error loading tags:', error);
+    }
+  };
 
   const loadEvents = async () => {
     try {
@@ -72,11 +88,15 @@ const EventsView: React.FC<EventsViewProps> = () => {
     
     try {
       if (editingEvent) {
-        await updateEvent(editingEvent.id, formData);
+        await updateEvent(editingEvent.id, {
+          ...formData,
+          tags: selectedTagIds
+        });
       } else {
         const newEvent: Event = {
           id: crypto.randomUUID(),
           ...formData,
+          tags: selectedTagIds,
           createdAt: new Date().toISOString()
         };
         await addEvent(newEvent);
@@ -92,6 +112,7 @@ const EventsView: React.FC<EventsViewProps> = () => {
 
   const handleEdit = (event: Event) => {
     setEditingEvent(event);
+    setSelectedTagIds(event.tags || []);
     setFormData({
       name: event.name,
       description: event.description || '',
@@ -103,7 +124,8 @@ const EventsView: React.FC<EventsViewProps> = () => {
       notifyDaysBefore: event.notifyDaysBefore || 0,
       priority: event.priority || 5,
       hideFromDashboard: event.hideFromDashboard || false,
-      color: event.color || '#667eea'
+      color: event.color || '#667eea',
+      tags: event.tags || []
     });
     setIsEditing(true);
   };
@@ -139,22 +161,23 @@ const EventsView: React.FC<EventsViewProps> = () => {
   const getDefaultNotifyDays = (category: string): number => {
     const notifyDays: { [key: string]: number } = {
       'Birthday': 3,
-      'Anniversary': 7,
-      'Wedding': 7,
-      'Graduation': 7,
-      'Special Event': 7,
-      'Festival': 7,
-      'Holiday': 7,
-      "Mother's Day": 7,
-      "Father's Day": 7,
-      "Valentine's Day": 7,
-      "Independence Day": 7,
-      "Cultural Event": 7,
+      'Anniversary': 3,
+      'Wedding': 3,
+      'Graduation': 3,
+      'Special Event': 3,
+      'Festival': 3,
+      'Holiday': 3,
+      "Mother's Day": 3,
+      "Father's Day": 3,
+      "Valentine's Day": 3,
+      "Independence Day": 3,
+      "Cultural Event": 3,
       'Death Anniversary': 1,
       'Memorial': 1,
       'Remembrance': 1,
     };
-    return notifyDays[category] || 0;
+    const days = notifyDays[category] || 0;
+    return Math.min(days, 7); // Ensure max 7 days
   };
 
   const getDefaultColor = (category: string): string => {
@@ -229,10 +252,20 @@ const EventsView: React.FC<EventsViewProps> = () => {
       notifyDaysBefore: 0,
       priority: 5,
       hideFromDashboard: false,
-      color: '#667eea'
+      color: '#667eea',
+      tags: []
     });
+    setSelectedTagIds([]);
     setEditingEvent(null);
     setIsEditing(false);
+  };
+
+  const toggleTag = (tagId: string) => {
+    setSelectedTagIds(prev => 
+      prev.includes(tagId) 
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
+    );
   };
 
   const handleImportSample = async () => {
@@ -510,12 +543,38 @@ const EventsView: React.FC<EventsViewProps> = () => {
             </select>
           </div>
           
-          {(searchText || filterCategory !== 'all' || filterFrequency !== 'all') && (
-            <button
+          <div style={{ flex: '0 1 150px', minWidth: '120px' }}>
+            <label style={{ fontSize: '0.875rem', color: '#6b7280', display: 'block', marginBottom: '0.25rem' }}>
+              Sort By
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.5rem',
+                borderRadius: '8px',
+                border: '1px solid #d1d5db',
+                fontSize: '0.875rem'
+              }}
+            >
+              <option value="date-asc">Date (Earliest First)</option>
+              <option value="date-desc">Date (Latest First)</option>
+              <option value="name-asc">Name (A-Z)</option>
+              <option value="name-desc">Name (Z-A)</option>
+              <option value="category-asc">Category (A-Z)</option>
+              <option value="priority-desc">Priority (High to Low)</option>
+              <option value="priority-asc">Priority (Low to High)</option>
+            </select>
+          </div>
+          
+          {(searchText || filterCategory !== 'all' || filterFrequency !== 'all' || sortBy !== 'date-asc') && (
+              <button
               onClick={() => {
                 setSearchText('');
                 setFilterCategory('all');
                 setFilterFrequency('all');
+                setSortBy('date-asc');
               }}
               style={{
                 padding: '0.5rem 1rem',
@@ -649,6 +708,83 @@ const EventsView: React.FC<EventsViewProps> = () => {
               </div>
             )}
 
+            <div className="form-group">
+              <label>Tags <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: 'normal' }}>(Optional)</span></label>
+              {tags.length === 0 ? (
+                <div style={{ 
+                  padding: '1rem', 
+                  background: '#f3f4f6', 
+                  borderRadius: '8px', 
+                  color: '#6b7280',
+                  fontSize: '0.875rem',
+                  textAlign: 'center'
+                }}>
+                  No tags available. Create tags in Settings → Tags Manager to organize your events.
+                </div>
+              ) : (
+                <div style={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: '0.5rem',
+                  padding: '0.75rem',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  minHeight: '60px',
+                  background: 'white'
+                }}>
+                  {tags.map(tag => (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleTag(tag.id)}
+                      style={{
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '20px',
+                        border: `2px solid ${selectedTagIds.includes(tag.id) ? tag.color : '#e5e7eb'}`,
+                        background: selectedTagIds.includes(tag.id) 
+                          ? `${tag.color}20` 
+                          : 'white',
+                        color: selectedTagIds.includes(tag.id) ? tag.color : '#6b7280',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        fontWeight: selectedTagIds.includes(tag.id) ? 600 : 500,
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!selectedTagIds.includes(tag.id)) {
+                          e.currentTarget.style.borderColor = tag.color;
+                          e.currentTarget.style.background = `${tag.color}10`;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!selectedTagIds.includes(tag.id)) {
+                          e.currentTarget.style.borderColor = '#e5e7eb';
+                          e.currentTarget.style.background = 'white';
+                        }
+                      }}
+                    >
+                      <span style={{ 
+                        width: '8px', 
+                        height: '8px', 
+                        borderRadius: '50%', 
+                        background: tag.color 
+                      }} />
+                      {tag.name}
+                      {selectedTagIds.includes(tag.id) && ' ✓'}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedTagIds.length > 0 && (
+                <small style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.5rem', display: 'block' }}>
+                  {selectedTagIds.length} tag{selectedTagIds.length > 1 ? 's' : ''} selected
+                </small>
+              )}
+            </div>
+
             <div className="form-row">
               <div className="form-group">
                 <label>Year (Optional)</label>
@@ -661,13 +797,17 @@ const EventsView: React.FC<EventsViewProps> = () => {
               </div>
 
               <div className="form-group">
-                <label>Notify Days Before <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: 'normal' }}>(Auto-set)</span></label>
+                <label>Notify Days Before <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: 'normal' }}>(Auto-set, max 7 days)</span></label>
                 <input
                   type="number"
                   min="0"
-                  max="30"
+                  max="7"
                   value={formData.notifyDaysBefore}
-                  onChange={(e) => setFormData({ ...formData, notifyDaysBefore: parseInt(e.target.value) || 0 })}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 0;
+                    const clampedValue = Math.min(Math.max(value, 0), 7); // Clamp between 0 and 7
+                    setFormData({ ...formData, notifyDaysBefore: clampedValue });
+                  }}
                 />
               </div>
 
@@ -743,6 +883,42 @@ const EventsView: React.FC<EventsViewProps> = () => {
             filteredEvents = filteredEvents.filter(event => event.frequency === filterFrequency);
           }
           
+          // Apply sorting
+          const sortedEvents = [...filteredEvents].sort((a, b) => {
+            switch (sortBy) {
+              case 'date-asc':
+                // Sort by date (month-day for yearly, full date for one-time)
+                if (a.frequency === 'yearly' && b.frequency === 'yearly') {
+                  return a.date.localeCompare(b.date);
+                }
+                return a.date.localeCompare(b.date);
+              
+              case 'date-desc':
+                if (a.frequency === 'yearly' && b.frequency === 'yearly') {
+                  return b.date.localeCompare(a.date);
+                }
+                return b.date.localeCompare(a.date);
+              
+              case 'name-asc':
+                return a.name.localeCompare(b.name);
+              
+              case 'name-desc':
+                return b.name.localeCompare(a.name);
+              
+              case 'category-asc':
+                return (a.category || '').localeCompare(b.category || '');
+              
+              case 'priority-desc':
+                return (b.priority || 5) - (a.priority || 5);
+              
+              case 'priority-asc':
+                return (a.priority || 5) - (b.priority || 5);
+              
+              default:
+                return 0;
+            }
+          });
+          
           return (
             <>
               <h3>📋 All Events ({filteredEvents.length}{filteredEvents.length !== events.length ? ` of ${events.length}` : ''})</h3>
@@ -752,15 +928,7 @@ const EventsView: React.FC<EventsViewProps> = () => {
                 </div>
               ) : (
                 <div className="events-grid">
-                  {filteredEvents
-                    .sort((a, b) => {
-                      // Sort by date (month-day for yearly, full date for one-time)
-                if (a.frequency === 'yearly' && b.frequency === 'yearly') {
-                  return a.date.localeCompare(b.date);
-                }
-                return a.date.localeCompare(b.date);
-              })
-              .map((event) => (
+                  {sortedEvents.map((event) => (
                 <div key={event.id} className="event-card" style={{ borderLeft: `6px solid ${event.color}` }}>
                   <div className="event-card-header">
                     <span className="event-icon">{getCategoryIcon(event.category || '')}</span>
