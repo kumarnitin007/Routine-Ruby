@@ -8,6 +8,7 @@ const ConfigureView: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [isDateOptionsExpanded, setIsDateOptionsExpanded] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -105,6 +106,8 @@ const ConfigureView: React.FC = () => {
   const handleEdit = (task: Task) => {
     setIsEditing(true);
     setEditingId(task.id);
+    // Expand date options if task has any date options set
+    setIsDateOptionsExpanded(!!(task.startDate || task.endDate || task.specificDate || task.endTime));
     setFormData({
       name: task.name,
       description: task.description || '',
@@ -140,6 +143,7 @@ const ConfigureView: React.FC = () => {
   };
 
   const resetForm = () => {
+    setIsDateOptionsExpanded(false);
     setFormData({
       name: '',
       description: '',
@@ -247,10 +251,149 @@ const ConfigureView: React.FC = () => {
   return (
     <div className="configure-view">
       <div className="view-header">
-        <h2>{isEditing ? 'Edit Task' : 'Add New Task'}</h2>
+        <h2>Tasks</h2>
       </div>
 
-      <form className="task-form" onSubmit={handleSubmit}>
+      {/* Action Buttons */}
+      <div style={{ 
+        display: 'flex', 
+        gap: '0.5rem', 
+        marginBottom: '1.5rem', 
+        flexWrap: 'wrap' 
+      }}>
+        <button 
+          className="btn-primary" 
+          onClick={() => {
+            if (isEditing) {
+              resetForm();
+            } else {
+              setIsEditing(true);
+              setEditingId(null);
+            }
+          }}
+        >
+          {isEditing ? '✕ Cancel' : '+ Add New Task'}
+        </button>
+        <button 
+          className="btn-secondary" 
+          onClick={handleImportSampleTasks}
+          disabled={isImporting}
+          style={{ background: '#3b82f6', color: 'white' }}
+        >
+          {isImporting ? 'Loading...' : '📥 Load Sample Tasks'}
+        </button>
+      </div>
+
+      {/* Tasks List */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.5rem', fontWeight: 700, color: '#667eea' }}>
+          📋 All Tasks ({tasks.length})
+        </h3>
+        {tasks.length === 0 ? (
+          <div className="no-events">
+            <p>No tasks yet. Click "Add New Task" to get started!</p>
+          </div>
+        ) : (
+          <div className="events-grid">
+            {tasks.map((task) => {
+              const getCategoryIcon = () => {
+                const icons: { [key: string]: string } = {
+                  'Exercise': '🏃',
+                  'Study': '📚',
+                  'Work': '💼',
+                  'Self Care': '🧘',
+                  'Grocery': '🛒',
+                  'Bill Payment': '💳',
+                  'Social': '👥',
+                  'Health': '🏥',
+                  'default': '📋'
+                };
+                return icons[task.category || ''] || icons['default'];
+              };
+
+              return (
+                <div 
+                  key={task.id} 
+                  className="event-card"
+                  style={{ borderLeft: `6px solid ${task.color || '#667eea'}` }}
+                >
+                  <div className="event-card-header">
+                    <span className="event-icon">{getCategoryIcon()}</span>
+                    <h4>{task.name}</h4>
+                  </div>
+                  
+                  {task.category && (
+                    <div className="event-category-badge">{task.category}</div>
+                  )}
+                  
+                  {task.description && (
+                    <div className="event-description">{task.description}</div>
+                  )}
+                  
+                  <div className="event-meta">
+                    <span className="event-frequency-badge">
+                      {getFrequencyDisplay(task)}
+                    </span>
+                    <span className="event-priority-badge">
+                      ⭐ Priority: {task.weightage}/10
+                    </span>
+                    {task.specificDate && (
+                      <span className="event-notify-badge">
+                        🎯 One-time: {task.specificDate}
+                      </span>
+                    )}
+                    {!task.specificDate && task.startDate && (
+                      <span className="event-notify-badge">
+                        📆 From: {task.startDate}
+                      </span>
+                    )}
+                    {!task.specificDate && task.endDate && (
+                      <span className="event-notify-badge">
+                        📆 Until: {task.endDate}
+                      </span>
+                    )}
+                    {task.onHold && (
+                      <span className="event-hidden-badge" style={{ 
+                        background: '#fee2e2', 
+                        color: '#991b1b',
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600'
+                      }}>
+                        ⏸️ On Hold
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="event-actions">
+                    <button className="btn-edit" onClick={() => handleEdit(task)}>
+                      ✏️ Edit
+                    </button>
+                    <button className="btn-delete" onClick={() => handleDelete(task.id)}>
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Add/Edit Form */}
+      {isEditing && (
+        <div className="task-form-container" style={{
+          background: 'rgba(255, 255, 255, 0.95)',
+          borderRadius: '12px',
+          padding: '2rem',
+          border: '2px solid #e5e7eb',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+        }}>
+          <h3 style={{ marginTop: 0, marginBottom: '1.5rem' }}>
+            {editingId ? 'Edit Task' : 'Add New Task'}
+          </h3>
+          <form className="task-form" onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Task Name *</label>
           <input
@@ -488,70 +631,93 @@ const ConfigureView: React.FC = () => {
         {/* Date Range & One-Time Task Options */}
         <div style={{ 
           marginTop: '1.5rem', 
-          padding: '1rem', 
           background: 'linear-gradient(135deg, #667eea20 0%, #764ba220 100%)',
           borderRadius: '8px',
-          border: '1px solid #667eea40'
+          border: '1px solid #667eea40',
+          overflow: 'hidden'
         }}>
-          <h4 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: '#667eea' }}>
-            📅 Date Options (Optional)
-          </h4>
-
-          <div className="form-group">
-            <label>Specific Date (One-Time Task)</label>
-            <input
-              type="date"
-              value={formData.specificDate}
-              onChange={(e) => setFormData({ ...formData, specificDate: e.target.value })}
-              placeholder="YYYY-MM-DD"
-            />
-            <small style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-              🎯 For one-time tasks on a specific date (overrides frequency)
-            </small>
-          </div>
-
-          {!formData.specificDate && (
-            <>
+          <button
+            type="button"
+            onClick={() => setIsDateOptionsExpanded(!isDateOptionsExpanded)}
+            style={{
+              width: '100%',
+              padding: '1rem',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: '1rem',
+              color: '#667eea',
+              fontWeight: 600
+            }}
+          >
+            <span>📅 Date Options (Optional)</span>
+            <span style={{ fontSize: '1.2rem', transition: 'transform 0.2s', transform: isDateOptionsExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+              ▼
+            </span>
+          </button>
+          
+          {isDateOptionsExpanded && (
+            <div style={{ padding: '0 1rem 1rem 1rem' }}>
               <div className="form-group">
-                <label>Start Date</label>
+                <label>Specific Date (One-Time Task)</label>
                 <input
                   type="date"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  value={formData.specificDate}
+                  onChange={(e) => setFormData({ ...formData, specificDate: e.target.value })}
                   placeholder="YYYY-MM-DD"
                 />
                 <small style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                  📆 Task won't appear before this date
+                  🎯 For one-time tasks on a specific date (overrides frequency)
                 </small>
               </div>
 
-              <div className="form-group">
-                <label>End Date</label>
-                <input
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  placeholder="YYYY-MM-DD"
-                  min={formData.startDate || undefined}
-                />
-                <small style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                  📆 Task won't appear after this date
-                </small>
-              </div>
+              {!formData.specificDate && (
+                <>
+                  <div className="form-group">
+                    <label>Start Date</label>
+                    <input
+                      type="date"
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      placeholder="YYYY-MM-DD"
+                    />
+                    <small style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                      📆 Task won't appear before this date
+                    </small>
+                  </div>
 
-              <div className="form-group">
-                <label>End Time (for Timer Countdown)</label>
-                <input
-                  type="time"
-                  value={formData.endTime}
-                  onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                  placeholder="HH:mm"
-                />
-                <small style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                  ⏱️ Set a daily end time to use "Countdown to Task End Time" feature in Timer
-                </small>
-              </div>
-            </>
+                  <div className="form-group">
+                    <label>End Date</label>
+                    <input
+                      type="date"
+                      value={formData.endDate}
+                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      placeholder="YYYY-MM-DD"
+                      min={formData.startDate || undefined}
+                    />
+                    <small style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                      📆 Task won't appear after this date
+                    </small>
+                  </div>
+
+                  <div className="form-group">
+                    <label>End Time (for Timer Countdown)</label>
+                    <input
+                      type="time"
+                      value={formData.endTime}
+                      onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                      placeholder="HH:mm"
+                    />
+                    <small style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                      ⏱️ Set a daily end time to use "Countdown to Task End Time" feature in Timer
+                    </small>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
 
@@ -602,200 +768,281 @@ const ConfigureView: React.FC = () => {
         {/* Dependent Tasks */}
         <div style={{ 
           marginTop: '1.5rem', 
-          padding: '1rem', 
-          background: 'linear-gradient(135deg, #06b6d420 0%, #0891b220 100%)',
-          borderRadius: '8px',
-          border: '1px solid #06b6d440'
+          padding: '1.5rem', 
+          background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
+          borderRadius: '12px',
+          border: '2px solid #0ea5e9',
+          boxShadow: '0 2px 8px rgba(14, 165, 233, 0.15)'
         }}>
-          <h4 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: '#0891b2' }}>
-            🔗 Dependent Tasks (Auto-Complete)
-          </h4>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '1.25rem' }}>🔗</span>
+            <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#0c4a6e', fontWeight: 600 }}>
+              Dependent Tasks (Auto-Complete)
+            </h4>
+          </div>
           
-          <div className="form-group">
-            <label>Parent Tasks (Completing these will auto-complete THIS task)</label>
-            <div style={{ marginTop: '0.5rem' }}>
-              {tasks.filter(t => t.id !== editingId).length === 0 ? (
-                <small style={{ color: '#6b7280' }}>No other tasks available</small>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto', border: '1px solid #d1d5db', borderRadius: '4px', padding: '0.5rem' }}>
-                  {tasks.filter(t => t.id !== editingId).map(task => (
-                    <label key={task.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', background: formData.dependentTaskIds.includes(task.id) ? '#e0f2fe' : 'white', borderRadius: '4px', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={formData.dependentTaskIds.includes(task.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setFormData({ ...formData, dependentTaskIds: [...formData.dependentTaskIds, task.id] });
-                          } else {
-                            setFormData({ ...formData, dependentTaskIds: formData.dependentTaskIds.filter(id => id !== task.id) });
-                          }
-                        }}
-                      />
-                      <span style={{ fontSize: '0.875rem', fontWeight: formData.dependentTaskIds.includes(task.id) ? 600 : 400 }}>
-                        {task.name}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-            <small style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.5rem', display: 'block' }}>
-              🔗 Example: "Walk 5K" auto-completes when "Walk 10K" is marked done
-            </small>
+          <div style={{ 
+            marginBottom: '0.75rem',
+            padding: '0.75rem',
+            background: 'rgba(255, 255, 255, 0.7)',
+            borderRadius: '8px',
+            fontSize: '0.875rem',
+            color: '#075985',
+            fontWeight: 500
+          }}>
+            Parent Tasks (Completing these will auto-complete THIS task)
+          </div>
+          
+          <div style={{ marginBottom: '1rem' }}>
+            {tasks.filter(t => t.id !== editingId).length === 0 ? (
+              <div style={{ 
+                padding: '1rem', 
+                background: 'rgba(255, 255, 255, 0.6)', 
+                borderRadius: '8px',
+                textAlign: 'center',
+                color: '#64748b',
+                fontSize: '0.875rem'
+              }}>
+                No other tasks available
+              </div>
+            ) : (
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '0.5rem', 
+                maxHeight: '200px', 
+                overflowY: 'auto',
+                background: 'rgba(255, 255, 255, 0.8)',
+                border: '2px solid #0ea5e9',
+                borderRadius: '8px', 
+                padding: '0.75rem',
+                boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.05)'
+              }}>
+                {tasks.filter(t => t.id !== editingId).map(task => (
+                  <label 
+                    key={task.id} 
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.75rem', 
+                      padding: '0.75rem', 
+                      background: formData.dependentTaskIds.includes(task.id) 
+                        ? 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)' 
+                        : 'white', 
+                      borderRadius: '8px', 
+                      cursor: 'pointer',
+                      border: formData.dependentTaskIds.includes(task.id) 
+                        ? '2px solid #0284c7' 
+                        : '2px solid #e2e8f0',
+                      transition: 'all 0.2s',
+                      boxShadow: formData.dependentTaskIds.includes(task.id) 
+                        ? '0 2px 6px rgba(14, 165, 233, 0.3)' 
+                        : '0 1px 2px rgba(0, 0, 0, 0.05)'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!formData.dependentTaskIds.includes(task.id)) {
+                        e.currentTarget.style.background = '#f1f5f9';
+                        e.currentTarget.style.borderColor = '#0ea5e9';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!formData.dependentTaskIds.includes(task.id)) {
+                        e.currentTarget.style.background = 'white';
+                        e.currentTarget.style.borderColor = '#e2e8f0';
+                      }
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.dependentTaskIds.includes(task.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFormData({ ...formData, dependentTaskIds: [...formData.dependentTaskIds, task.id] });
+                        } else {
+                          setFormData({ ...formData, dependentTaskIds: formData.dependentTaskIds.filter(id => id !== task.id) });
+                        }
+                      }}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        cursor: 'pointer',
+                        accentColor: '#0ea5e9'
+                      }}
+                    />
+                    <span style={{ 
+                      fontSize: '0.9rem', 
+                      fontWeight: formData.dependentTaskIds.includes(task.id) ? 600 : 500,
+                      color: formData.dependentTaskIds.includes(task.id) ? 'white' : '#1e293b'
+                    }}>
+                      {task.name}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div style={{ 
+            padding: '0.75rem',
+            background: 'rgba(255, 255, 255, 0.6)',
+            borderRadius: '8px',
+            fontSize: '0.875rem',
+            color: '#075985',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <span>💡</span>
+            <span><strong>Example:</strong> "Walk 5K" auto-completes when "Walk 10K" is marked done</span>
           </div>
         </div>
 
         {/* Hold Task Options */}
         <div style={{ 
           marginTop: '1.5rem', 
-          padding: '1rem', 
-          background: 'linear-gradient(135deg, #f4433620 0%, #dc262620 100%)',
-          borderRadius: '8px',
-          border: '1px solid #f4433640'
+          padding: '1.5rem', 
+          background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+          borderRadius: '12px',
+          border: '2px solid #ef4444',
+          boxShadow: '0 2px 8px rgba(239, 68, 68, 0.15)'
         }}>
-          <h4 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: '#dc2626' }}>
-            ⏸️ Hold Task (Pause Tracking)
-          </h4>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '1.25rem' }}>⏸️</span>
+            <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#991b1b', fontWeight: 600 }}>
+              Hold Task (Pause Tracking)
+            </h4>
+          </div>
           
-          <div className="form-group">
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+          <div style={{
+            padding: '1rem',
+            background: 'rgba(255, 255, 255, 0.7)',
+            borderRadius: '8px',
+            border: '2px solid #fca5a5',
+            marginBottom: '0.75rem'
+          }}>
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.75rem', 
+              cursor: 'pointer',
+              marginBottom: '0.5rem'
+            }}>
               <input
                 type="checkbox"
                 checked={formData.onHold}
                 onChange={(e) => setFormData({ ...formData, onHold: e.target.checked })}
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  cursor: 'pointer',
+                  accentColor: '#ef4444'
+                }}
               />
-              <span style={{ fontWeight: 600 }}>Put this task on hold</span>
+              <span style={{ 
+                fontWeight: 600, 
+                fontSize: '0.95rem',
+                color: '#991b1b'
+              }}>
+                Put this task on hold
+              </span>
             </label>
-            <small style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-              ⏸️ Paused tasks won't show up and won't count as missed days
-            </small>
+            <div style={{ 
+              marginLeft: '2rem',
+              padding: '0.5rem',
+              background: 'rgba(254, 226, 226, 0.5)',
+              borderRadius: '6px',
+              fontSize: '0.875rem',
+              color: '#7f1d1d',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <span>⏸️</span>
+              <span>Paused tasks won't show up and won't count as missed days</span>
+            </div>
           </div>
 
           {formData.onHold && (
-            <>
+            <div style={{
+              marginTop: '1rem',
+              padding: '1rem',
+              background: 'rgba(255, 255, 255, 0.8)',
+              borderRadius: '8px',
+              border: '2px solid #fca5a5'
+            }}>
               <div className="form-group">
-                <label>Hold Start Date</label>
+                <label style={{ color: '#991b1b', fontWeight: 500 }}>Hold Start Date</label>
                 <input
                   type="date"
                   value={formData.holdStartDate}
                   onChange={(e) => setFormData({ ...formData, holdStartDate: e.target.value })}
                   placeholder="YYYY-MM-DD"
+                  style={{
+                    padding: '0.5rem',
+                    border: '2px solid #fca5a5',
+                    borderRadius: '6px',
+                    fontSize: '0.9rem'
+                  }}
                 />
-                <small style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                <small style={{ color: '#7f1d1d', fontSize: '0.875rem', display: 'block', marginTop: '0.25rem' }}>
                   📅 When should the hold start? (defaults to today if empty)
                 </small>
               </div>
 
-              <div className="form-group">
-                <label>Hold End Date (Optional)</label>
+              <div className="form-group" style={{ marginTop: '1rem' }}>
+                <label style={{ color: '#991b1b', fontWeight: 500 }}>Hold End Date (Optional)</label>
                 <input
                   type="date"
                   value={formData.holdEndDate}
                   onChange={(e) => setFormData({ ...formData, holdEndDate: e.target.value })}
                   placeholder="YYYY-MM-DD"
                   min={formData.holdStartDate || undefined}
+                  style={{
+                    padding: '0.5rem',
+                    border: '2px solid #fca5a5',
+                    borderRadius: '6px',
+                    fontSize: '0.9rem'
+                  }}
                 />
-                <small style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                <small style={{ color: '#7f1d1d', fontSize: '0.875rem', display: 'block', marginTop: '0.25rem' }}>
                   📅 Auto-resume on this date (leave empty for manual resume)
                 </small>
               </div>
 
-              <div className="form-group">
-                <label>Hold Reason (Optional)</label>
+              <div className="form-group" style={{ marginTop: '1rem' }}>
+                <label style={{ color: '#991b1b', fontWeight: 500 }}>Hold Reason (Optional)</label>
                 <input
                   type="text"
                   value={formData.holdReason}
                   onChange={(e) => setFormData({ ...formData, holdReason: e.target.value })}
                   placeholder="e.g., Vacation, Injury, etc."
+                  style={{
+                    padding: '0.5rem',
+                    border: '2px solid #fca5a5',
+                    borderRadius: '6px',
+                    fontSize: '0.9rem',
+                    width: '100%'
+                  }}
                 />
-                <small style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                <small style={{ color: '#7f1d1d', fontSize: '0.875rem', display: 'block', marginTop: '0.25rem' }}>
                   📝 Why is this task on hold?
                 </small>
               </div>
-            </>
+            </div>
           )}
         </div>
 
-        <div className="form-actions">
-          {isEditing && (
+          <div className="form-actions">
             <button type="button" className="btn-secondary" onClick={resetForm}>
               Cancel
             </button>
-          )}
-          <button type="submit" className="btn-primary">
-            {isEditing ? 'Update Task' : 'Add Task'}
-          </button>
-        </div>
-      </form>
-
-      <div className="tasks-list">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <h3 style={{ margin: 0 }}>All Tasks ({tasks.length})</h3>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <button 
-              className="btn-secondary" 
-              onClick={handleImportSampleTasks}
-              disabled={isImporting}
-              style={{ background: '#3b82f6', color: 'white' }}
-            >
-              {isImporting ? 'Loading...' : '📥 Load Sample Tasks'}
+            <button type="submit" className="btn-primary">
+              {editingId ? 'Update Task' : 'Add Task'}
             </button>
-            {tasks.length > 0 && (
-              <button 
-                className="btn-secondary" 
-                onClick={handleClearAllData}
-                style={{ background: '#ef4444', color: 'white' }}
-              >
-                🗑️ Clear All Data
-              </button>
-            )}
           </div>
+        </form>
         </div>
-        {tasks.length === 0 ? (
-          <p style={{ color: '#6b7280', textAlign: 'center', padding: '2rem' }}>
-            No tasks yet. Add your first task above!
-          </p>
-        ) : (
-          tasks.map((task) => (
-            <div 
-              key={task.id} 
-              className="task-item"
-              style={{ '--task-color': task.color } as React.CSSProperties}
-            >
-              <div className="task-item-header">
-                <div>
-                  <h4>{task.name}</h4>
-                  {task.description && <p>{task.description}</p>}
-                  <div className="task-meta">
-                    {task.category && <span>📁 {task.category}</span>}
-                    <span>Weightage: {task.weightage}/10</span>
-                    <span>{getFrequencyDisplay(task)}</span>
-                    {task.specificDate && <span>🎯 One-time: {task.specificDate}</span>}
-                    {!task.specificDate && task.startDate && <span>📆 From: {task.startDate}</span>}
-                    {!task.specificDate && task.endDate && <span>📆 Until: {task.endDate}</span>}
-                  </div>
-                </div>
-                <div className="task-actions">
-                  <button
-                    className="btn-icon"
-                    onClick={() => handleEdit(task)}
-                    title="Edit"
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    className="btn-icon delete"
-                    onClick={() => handleDelete(task.id)}
-                    title="Delete"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+      )}
     </div>
   );
 };
