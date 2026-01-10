@@ -1,21 +1,15 @@
 /**
  * Timer Animation Components
  * 
- * Provides 5 fun animated timer display options:
- * 1. Pacman - Classic arcade-style progress
- * 2. Liquid Fill - Smooth liquid progress bar
- * 3. Plant Growth - Growing plant visualization
- * 4. Pulse Particles - Pulsing circle with particles
- * 5. Runner - Character running along a track
+ * Provides 2 animated timer display options:
+ * 1. Liquid Fill - Smooth liquid progress bar
+ * 2. Runner - Character running along a track
  */
 
 import React from 'react';
 
 export type TimerTheme = 
-  | 'pacman' 
   | 'liquid' 
-  | 'plant' 
-  | 'pulse' 
   | 'runner';
 
 interface TimerAnimationProps {
@@ -34,18 +28,12 @@ export const TimerAnimation: React.FC<TimerAnimationProps> = ({
   theme
 }) => {
   switch (theme) {
-    case 'pacman':
-      return <PacmanAnimation progress={progress} remainingSeconds={remainingSeconds} totalSeconds={totalSeconds} isComplete={isComplete} />;
     case 'liquid':
       return <LiquidFillAnimation progress={progress} isComplete={isComplete} />;
-    case 'plant':
-      return <PlantGrowthAnimation progress={progress} isComplete={isComplete} />;
-    case 'pulse':
-      return <PulseParticlesAnimation progress={progress} isComplete={isComplete} />;
     case 'runner':
       return <RunnerAnimation progress={progress} isComplete={isComplete} />;
     default:
-      return null;
+      return <LiquidFillAnimation progress={progress} isComplete={isComplete} />;
   }
 };
 

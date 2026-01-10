@@ -41,7 +41,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
   const [isPaused, setIsPaused] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [pausedTime, setPausedTime] = useState(0);
-  const [selectedTheme, setSelectedTheme] = useState<TimerTheme>('pacman');
+  const [selectedTheme, setSelectedTheme] = useState<TimerTheme>('liquid');
   
   const intervalRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -278,7 +278,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
                 flexWrap: 'wrap', 
                 justifyContent: 'center' 
               }}>
-                {(['pacman', 'liquid', 'plant', 'pulse', 'runner'] as TimerTheme[]).map((theme) => (
+                {(['liquid', 'runner'] as TimerTheme[]).map((theme) => (
                   <button
                     key={theme}
                     onClick={() => setSelectedTheme(theme)}
@@ -302,10 +302,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
                         : 'none'
                     }}
                   >
-                    {theme === 'pacman' && '👾'}
                     {theme === 'liquid' && '💧'}
-                    {theme === 'plant' && '🌱'}
-                    {theme === 'pulse' && '💫'}
                     {theme === 'runner' && '🏃'}
                     {' '}
                     {theme}
