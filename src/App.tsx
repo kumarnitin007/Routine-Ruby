@@ -110,7 +110,7 @@ const AppContent: React.FC = () => {
   // Listen for storage changes (e.g., from another tab)
   // Only refresh on specific key changes to avoid unnecessary refreshes
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     
     const handleStorageChange = (e: StorageEvent) => {
       // Only refresh if it's a meaningful change from another tab
