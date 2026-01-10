@@ -353,7 +353,11 @@ const EventsView: React.FC<EventsViewProps> = () => {
       const date = new Date(2000, parseInt(month) - 1, parseInt(day));
       return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
     } else {
-      return new Date(event.date).toLocaleDateString('en-US', { 
+      // Parse date string manually to avoid timezone issues
+      // event.date is in YYYY-MM-DD format
+      const [year, month, day] = event.date.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      return date.toLocaleDateString('en-US', { 
         year: 'numeric', 
         month: 'long', 
         day: 'numeric' 

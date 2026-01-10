@@ -21,8 +21,13 @@ import TasksAndEventsView from './TasksAndEventsView';
 import JournalView from './JournalView';
 import AnalyticsView from './AnalyticsView';
 import SettingsView from './SettingsView';
+import ItemsView from './ItemsView';
 import TimerView from './TimerView';
 import FloatingTimerButton from './components/FloatingTimerButton';
+import FloatingGiftCardsButton from './components/FloatingGiftCardsButton';
+import FloatingMilestonesButton from './components/FloatingMilestonesButton';
+import GiftCardsModal from './components/GiftCardsModal';
+import MilestonesModal from './components/MilestonesModal';
 import AboutModal from './components/AboutModal';
 import SettingsModal from './components/SettingsModal';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
@@ -45,6 +50,8 @@ const AppContent: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState(isFirstTimeUser());
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showTimerModal, setShowTimerModal] = useState(false);
+  const [showGiftCardsModal, setShowGiftCardsModal] = useState(false);
+  const [showMilestonesModal, setShowMilestonesModal] = useState(false);
   
   const { theme } = useTheme();
   const { avatar, username } = useUser();
@@ -147,6 +154,8 @@ const AppContent: React.FC = () => {
         return <TodayView key={`today-${key}`} onNavigate={handleNavigate} />;
       case 'tasks-events':
         return <TasksAndEventsView key={`tasks-events-${key}`} onNavigate={handleNavigate} />;
+      case 'items':
+        return <ItemsView key={`items-${key}`} onNavigate={handleNavigate} />;
       case 'journal':
         return <JournalView key={`journal-${key}`} />;
       case 'analytics':
@@ -205,6 +214,15 @@ const AppContent: React.FC = () => {
           >
             <span className="nav-icon">📋</span>
             <span className="nav-text">Tasks & Events</span>
+          </button>
+          <button
+            className={`nav-button ${currentView === 'items' ? 'active' : ''}`}
+            onClick={() => handleNavigate('items')}
+            title="Items & Resources"
+            style={currentView === 'items' ? { backgroundColor: theme.colors.primary } : {}}
+          >
+            <span className="nav-icon">📦</span>
+            <span className="nav-text">Items</span>
           </button>
           <button
             className={`nav-button ${currentView === 'journal' ? 'active' : ''}`}
@@ -299,11 +317,35 @@ const AppContent: React.FC = () => {
       {/* Floating Timer Button */}
       <FloatingTimerButton onClick={() => setShowTimerModal(true)} />
 
+      {/* Floating Gift Cards Button */}
+      <FloatingGiftCardsButton onClick={() => setShowGiftCardsModal(true)} />
+
+      {/* Floating Milestones Button */}
+      <FloatingMilestonesButton onClick={() => setShowMilestonesModal(true)} />
+
       {/* Timer Modal */}
       {showTimerModal && (
         <div className="modal-overlay active" onClick={() => setShowTimerModal(false)}>
           <div className="modal timer-modal" onClick={(e) => e.stopPropagation()}>
             <TimerView key={`timer-${key}`} onClose={() => setShowTimerModal(false)} />
+          </div>
+        </div>
+      )}
+
+      {/* Gift Cards Modal */}
+      {showGiftCardsModal && (
+        <div className="modal-overlay active" onClick={() => setShowGiftCardsModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <GiftCardsModal onClose={() => setShowGiftCardsModal(false)} />
+          </div>
+        </div>
+      )}
+
+      {/* Milestones Modal */}
+      {showMilestonesModal && (
+        <div className="modal-overlay active" onClick={() => setShowMilestonesModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <MilestonesModal onClose={() => setShowMilestonesModal(false)} />
           </div>
         </div>
       )}

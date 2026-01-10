@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Task, FrequencyType, IntervalUnit } from './types';
-import { loadData, addTask, updateTask, deleteTask, importSampleTasks, clearAllData } from './storage';
+import { Task, FrequencyType, IntervalUnit, Tag } from './types';
+import { loadData, addTask, updateTask, deleteTask, importSampleTasks, clearAllData, getTags } from './storage';
 import { generateId, getColorForTask } from './utils';
 
 const ConfigureView: React.FC = () => {
@@ -9,6 +9,8 @@ const ConfigureView: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [isDateOptionsExpanded, setIsDateOptionsExpanded] = useState(false);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -38,7 +40,17 @@ const ConfigureView: React.FC = () => {
 
   useEffect(() => {
     loadTasks();
+    loadTags();
   }, []);
+
+  const loadTags = async () => {
+    try {
+      const allTags = await getTags();
+      setTags(allTags);
+    } catch (error) {
+      console.error('Error loading tags:', error);
+    }
+  };
 
   const loadTasks = async () => {
     try {
@@ -63,6 +75,7 @@ const ConfigureView: React.FC = () => {
       name: formData.name,
       description: formData.description,
       category: formData.category || undefined,
+      tags: selectedTagIds.length > 0 ? selectedTagIds : undefined,
       weightage: formData.weightage,
       frequency: formData.frequency,
       daysOfWeek: formData.frequency === 'weekly' ? formData.daysOfWeek : undefined,
@@ -144,6 +157,7 @@ const ConfigureView: React.FC = () => {
 
   const resetForm = () => {
     setIsDateOptionsExpanded(false);
+    setSelectedTagIds([]);
     setFormData({
       name: '',
       description: '',
@@ -171,6 +185,20 @@ const ConfigureView: React.FC = () => {
     });
     setIsEditing(false);
     setEditingId(null);
+  };
+
+  // Tag handling
+  const availableTags = tags.filter(tag => !selectedTagIds.includes(tag.id));
+  const selectedTags = tags.filter(tag => selectedTagIds.includes(tag.id));
+
+  const handleTagSelect = (tagId: string) => {
+    if (!selectedTagIds.includes(tagId)) {
+      setSelectedTagIds([...selectedTagIds, tagId]);
+    }
+  };
+
+  const handleTagRemove = (tagId: string) => {
+    setSelectedTagIds(selectedTagIds.filter(id => id !== tagId));
   };
 
   const toggleWeekday = (day: number) => {
@@ -436,6 +464,73 @@ const ConfigureView: React.FC = () => {
           <small style={{ color: '#6b7280', fontSize: '0.875rem' }}>
             Optional - helps organize tasks
           </small>
+        </div>
+
+        {/* Tags */}
+        <div className="form-group">
+          <label>Tags</label>
+          {selectedTags.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              {selectedTags.map(tag => (
+                <span
+                  key={tag.id}
+                  style={{
+                    background: tag.color,
+                    color: 'white',
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '12px',
+                    fontSize: '0.875rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  {tag.name}
+                  <button
+                    type="button"
+                    onClick={() => handleTagRemove(tag.id)}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.3)',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '18px',
+                      height: '18px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.75rem'
+                    }}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          {availableTags.length > 0 && (
+            <select
+              value=""
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleTagSelect(e.target.value);
+                  e.target.value = '';
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '0.5rem',
+                borderRadius: '8px',
+                border: '1px solid #d1d5db',
+                fontSize: '0.875rem'
+              }}
+            >
+              <option value="">Add a tag...</option>
+              {availableTags.map(tag => (
+                <option key={tag.id} value={tag.id}>{tag.name}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="form-row">

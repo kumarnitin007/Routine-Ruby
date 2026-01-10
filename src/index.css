@@ -4849,6 +4849,467 @@ body {
   font-size: 1.75rem;
 }
 
+.floating-giftcards-button {
+  position: fixed;
+  bottom: 8rem;
+  right: 2rem;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border: none;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.floating-giftcards-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.5);
+}
+
+.floating-giftcards-button:active {
+  transform: scale(0.95);
+}
+
+.floating-giftcards-button .giftcards-icon {
+  font-size: 1.75rem;
+}
+
+.floating-milestones-button {
+  position: fixed;
+  bottom: 14rem;
+  right: 2rem;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border: none;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.floating-milestones-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.5);
+}
+
+.floating-milestones-button:active {
+  transform: scale(0.95);
+}
+
+.floating-milestones-button .milestones-icon {
+  font-size: 1.75rem;
+}
+
+@media (max-width: 768px) {
+  .floating-milestones-button {
+    bottom: 13rem;
+    right: 1rem;
+    width: 50px;
+    height: 50px;
+  }
+
+  .floating-milestones-button .milestones-icon {
+    font-size: 1.5rem;
+  }
+}
+
+/* ============================================
+   MILESTONES MODAL
+   ============================================ */
+
+.milestones-modal-content {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 1200px;
+  width: 95vw;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.milestones-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.milestones-modal-header h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  color: #1f2937;
+}
+
+.milestones-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  max-width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .milestones-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .milestones-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.milestone-item {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s;
+  border-left: 6px solid #8b5cf6;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.milestone-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.milestone-days-remaining {
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.days-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1.5rem;
+  border-radius: 12px;
+  min-width: 120px;
+  text-align: center;
+  width: 100%;
+}
+
+.days-badge.upcoming {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.days-badge.today {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+}
+
+.days-badge.past {
+  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+  color: #6b7280;
+}
+
+.days-number {
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.days-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.95;
+  margin-bottom: 0.75rem;
+}
+
+.milestone-name-in-badge {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  width: 100%;
+}
+
+.milestone-name-in-badge h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.days-badge.past .milestone-name-in-badge h3 {
+  color: #1f2937;
+}
+
+.days-badge.past .milestone-name-in-badge {
+  border-top-color: rgba(0, 0, 0, 0.1);
+}
+
+.milestone-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-top: 1rem;
+}
+
+.milestone-date-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.milestone-date-box {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.date-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.date-icon {
+  font-size: 1rem;
+}
+
+.date-text {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 0.9rem;
+}
+
+.milestone-category-box {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.category-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+/* ============================================
+   GIFT CARDS MODAL
+   ============================================ */
+
+.giftcards-modal-content {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 1200px;
+  width: 95vw;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.giftcards-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.giftcards-modal-header h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  color: #1f2937;
+}
+
+.modal-close-button {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.modal-close-button:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.giftcards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.giftcards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  max-width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .giftcards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .giftcards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.giftcard-item {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s;
+}
+
+.giftcard-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.giftcard-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.giftcard-icon {
+  font-size: 2rem;
+}
+
+.giftcard-info h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.giftcard-merchant {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.giftcard-description {
+  margin: 0.5rem 0 1rem 0;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.giftcard-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.giftcard-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.detail-value {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 1rem;
+}
+
+.detail-value.balance {
+  color: #059669;
+  font-size: 1.1rem;
+}
+
+.detail-value.expired {
+  color: #dc2626;
+}
+
+.giftcard-actions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-mark-closed {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-mark-closed:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.btn-mark-closed:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .floating-giftcards-button {
+    bottom: 7rem;
+    right: 1rem;
+    width: 50px;
+    height: 50px;
+  }
+
+  .floating-giftcards-button .giftcards-icon {
+    font-size: 1.5rem;
+  }
+
+  .giftcards-modal-content {
+    padding: 1.5rem;
+    max-width: 95vw;
+  }
+}
+
 /* ============================================
    TIMER MODAL
    ============================================ */

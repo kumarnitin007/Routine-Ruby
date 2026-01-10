@@ -7,7 +7,7 @@
  */
 
 import { getSupabaseClient } from './lib/supabase';
-import { AppData, Task, TaskCompletion, Event, JournalEntry, Routine, Tag, UserSettings, DashboardLayout } from './types';
+import { AppData, Task, TaskCompletion, Event, JournalEntry, Routine, Tag, UserSettings, DashboardLayout, Item } from './types';
 import { getTodayString } from './utils';
 
 // ===== HELPER FUNCTIONS =====
@@ -485,6 +485,130 @@ export const deleteEvent = async (eventId: string): Promise<void> => {
   if (error) throw error;
 };
 
+// ===== ITEMS =====
+
+export const getItems = async (): Promise<Item[]> => {
+  const { client } = await requireAuth();
+  
+  const { data, error } = await client
+    .from('myday_items')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching items:', error);
+    return [];
+  }
+
+  return (data || []).map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    category: row.category,
+    tags: row.tags || [],
+    expirationDate: row.expiration_date,
+    value: row.value,
+    currency: row.currency,
+    merchant: row.merchant,
+    accountNumber: row.account_number,
+    autoRenew: row.auto_renew || false,
+    notifyDaysBefore: row.notify_days_before || 0,
+    priority: row.priority || 5,
+    color: row.color,
+    isClosed: row.is_closed || false,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }));
+};
+
+export const addItem = async (item: Item): Promise<void> => {
+  const { client, userId } = await requireAuth();
+
+  const { error } = await client
+    .from('myday_items')
+    .insert([{
+      id: item.id,
+      user_id: userId,
+      name: item.name,
+      description: item.description,
+      category: item.category,
+      tags: item.tags || [],
+      expiration_date: item.expirationDate,
+      value: item.value,
+      currency: item.currency,
+      merchant: item.merchant,
+      account_number: item.accountNumber,
+      auto_renew: item.autoRenew || false,
+      notify_days_before: item.notifyDaysBefore || 0,
+      priority: item.priority || 5,
+      color: item.color,
+      is_closed: item.isClosed || false,
+      created_at: item.createdAt,
+      updated_at: item.updatedAt || item.createdAt
+    }]);
+
+  if (error) throw error;
+};
+
+export const updateItem = async (itemId: string, updates: Partial<Item>): Promise<void> => {
+  const { client } = await requireAuth();
+
+  const dbUpdates: any = {
+    updated_at: new Date().toISOString()
+  };
+  
+  if (updates.name !== undefined) dbUpdates.name = updates.name;
+  if (updates.description !== undefined) dbUpdates.description = updates.description;
+  if (updates.category !== undefined) dbUpdates.category = updates.category;
+  if (updates.tags !== undefined) dbUpdates.tags = updates.tags;
+  if (updates.expirationDate !== undefined) dbUpdates.expiration_date = updates.expirationDate;
+  if (updates.value !== undefined) dbUpdates.value = updates.value;
+  if (updates.currency !== undefined) dbUpdates.currency = updates.currency;
+  if (updates.merchant !== undefined) dbUpdates.merchant = updates.merchant;
+  if (updates.accountNumber !== undefined) dbUpdates.account_number = updates.accountNumber;
+  if (updates.autoRenew !== undefined) dbUpdates.auto_renew = updates.autoRenew;
+  if (updates.notifyDaysBefore !== undefined) dbUpdates.notify_days_before = updates.notifyDaysBefore;
+  if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
+  if (updates.color !== undefined) dbUpdates.color = updates.color;
+  if (updates.isClosed !== undefined) dbUpdates.is_closed = updates.isClosed;
+
+  const { error } = await client
+    .from('myday_items')
+    .update(dbUpdates)
+    .eq('id', itemId);
+
+  if (error) throw error;
+};
+
+export const deleteItem = async (itemId: string): Promise<void> => {
+  const { client } = await requireAuth();
+
+  const { error } = await client
+    .from('myday_items')
+    .delete()
+    .eq('id', itemId);
+
+  if (error) throw error;
+};
+
+export const getExpiringItems = async (daysAhead: number = 30): Promise<Item[]> => {
+  const items = await getItems();
+  if (items.length === 0) return [];
+
+  const today = new Date();
+  const futureDate = new Date();
+  futureDate.setDate(today.getDate() + daysAhead);
+
+  return items.filter(item => {
+    if (!item.expirationDate) return false;
+    const expDate = new Date(item.expirationDate);
+    return expDate >= today && expDate <= futureDate;
+  }).sort((a, b) => {
+    if (!a.expirationDate || !b.expirationDate) return 0;
+    return new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime();
+  });
+};
+
 // ===== JOURNAL ENTRIES =====
 
 export const getJournalEntries = async (): Promise<JournalEntry[]> => {
@@ -889,13 +1013,14 @@ export const markOnboardingComplete = (): void => {
 // ===== DATA OPERATIONS =====
 
 export const loadData = async (): Promise<AppData> => {
-  const [tasks, completions, events, journalEntries, routines, tags] = await Promise.all([
+  const [tasks, completions, events, journalEntries, routines, tags, items] = await Promise.all([
     getTasks(),
     getCompletions(),
     getEvents(),
     getJournalEntries(),
     getRoutines(),
-    getTags()
+    getTags(),
+    getItems()
   ]);
 
   return {
@@ -906,7 +1031,8 @@ export const loadData = async (): Promise<AppData> => {
     eventAcknowledgments: [], // Not implemented yet
     journalEntries,
     routines,
-    tags
+    tags,
+    items
   };
 };
 
@@ -1259,6 +1385,392 @@ export const importSampleTasks = async (replace: boolean = false): Promise<boole
 
 export const importSampleEvents = async (replace: boolean = false): Promise<boolean> => {
   throw new Error('Sample events import not supported in Supabase mode. Please create events manually or import from file.');
+};
+
+export const importSampleItems = async (replace: boolean = false): Promise<boolean> => {
+  try {
+    const { client, userId } = await requireAuth();
+    
+    if (replace) {
+      // Delete all existing items
+      const { error: deleteError } = await client
+        .from('myday_items')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (deleteError) {
+        console.error('Error deleting existing items:', deleteError);
+        return false;
+      }
+    }
+    
+    const now = new Date();
+    const sampleItems = [
+      // Gift Cards (5 items)
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'Amazon Gift Card',
+        description: 'Received as birthday gift',
+        category: 'Gift Card',
+        tags: [],
+        expiration_date: null,
+        value: 50.00,
+        currency: 'USD',
+        merchant: 'Amazon',
+        account_number: '****1234',
+        auto_renew: false,
+        notify_days_before: 0,
+        priority: 7,
+        color: '#ff9900',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'Starbucks Gift Card',
+        description: 'Coffee fund',
+        category: 'Gift Card',
+        tags: [],
+        expiration_date: null,
+        value: 25.00,
+        currency: 'USD',
+        merchant: 'Starbucks',
+        account_number: '****5678',
+        auto_renew: false,
+        notify_days_before: 0,
+        priority: 5,
+        color: '#00704a',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'Target Gift Card',
+        description: 'For household items',
+        category: 'Gift Card',
+        tags: [],
+        expiration_date: new Date(now.getFullYear() + 1, 11, 31).toISOString().split('T')[0],
+        value: 100.00,
+        currency: 'USD',
+        merchant: 'Target',
+        account_number: '****9012',
+        auto_renew: false,
+        notify_days_before: 30,
+        priority: 6,
+        color: '#cc0000',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'Apple Store Gift Card',
+        description: 'For accessories',
+        category: 'Gift Card',
+        tags: [],
+        expiration_date: null,
+        value: 75.00,
+        currency: 'USD',
+        merchant: 'Apple',
+        account_number: '****3456',
+        auto_renew: false,
+        notify_days_before: 0,
+        priority: 8,
+        color: '#000000',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'Restaurant Gift Card',
+        description: 'Local Italian restaurant',
+        category: 'Gift Card',
+        tags: [],
+        expiration_date: new Date(now.getFullYear(), now.getMonth() + 6, now.getDate()).toISOString().split('T')[0],
+        value: 40.00,
+        currency: 'USD',
+        merchant: 'Bella Italia',
+        account_number: null,
+        auto_renew: false,
+        notify_days_before: 14,
+        priority: 5,
+        color: '#8b4513',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      
+      // Subscriptions (5 items)
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'Netflix Subscription',
+        description: 'Monthly streaming service',
+        category: 'Subscription',
+        tags: [],
+        expiration_date: new Date(now.getFullYear(), now.getMonth() + 1, now.getDate()).toISOString().split('T')[0],
+        value: 15.99,
+        currency: 'USD',
+        merchant: 'Netflix',
+        account_number: 'user@example.com',
+        auto_renew: true,
+        notify_days_before: 3,
+        priority: 8,
+        color: '#e50914',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'Spotify Premium',
+        description: 'Music streaming',
+        category: 'Subscription',
+        tags: [],
+        expiration_date: new Date(now.getFullYear(), now.getMonth() + 1, now.getDate()).toISOString().split('T')[0],
+        value: 9.99,
+        currency: 'USD',
+        merchant: 'Spotify',
+        account_number: 'premium@example.com',
+        auto_renew: true,
+        notify_days_before: 3,
+        priority: 7,
+        color: '#1db954',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'Adobe Creative Cloud',
+        description: 'Annual subscription',
+        category: 'Subscription',
+        tags: [],
+        expiration_date: new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()).toISOString().split('T')[0],
+        value: 599.88,
+        currency: 'USD',
+        merchant: 'Adobe',
+        account_number: 'creative@example.com',
+        auto_renew: true,
+        notify_days_before: 30,
+        priority: 9,
+        color: '#ff0000',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'Gym Membership',
+        description: 'Monthly fitness center',
+        category: 'Subscription',
+        tags: [],
+        expiration_date: new Date(now.getFullYear(), now.getMonth() + 1, now.getDate()).toISOString().split('T')[0],
+        value: 49.99,
+        currency: 'USD',
+        merchant: 'FitLife Gym',
+        account_number: 'MEMBER-12345',
+        auto_renew: true,
+        notify_days_before: 7,
+        priority: 6,
+        color: '#0066cc',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'Microsoft 365',
+        description: 'Office suite subscription',
+        category: 'Subscription',
+        tags: [],
+        expiration_date: new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()).toISOString().split('T')[0],
+        value: 99.99,
+        currency: 'USD',
+        merchant: 'Microsoft',
+        account_number: 'office@example.com',
+        auto_renew: true,
+        notify_days_before: 30,
+        priority: 8,
+        color: '#0078d4',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      
+      // Warranties (4 items)
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'iPhone 15 Pro Warranty',
+        description: 'AppleCare+ coverage',
+        category: 'Warranty',
+        tags: [],
+        expiration_date: new Date(now.getFullYear() + 2, now.getMonth(), now.getDate()).toISOString().split('T')[0],
+        value: 1299.00,
+        currency: 'USD',
+        merchant: 'Apple',
+        account_number: 'SN-ABC123XYZ',
+        auto_renew: false,
+        notify_days_before: 60,
+        priority: 9,
+        color: '#000000',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'Laptop Warranty',
+        description: 'Extended warranty for Dell XPS',
+        category: 'Warranty',
+        tags: [],
+        expiration_date: new Date(now.getFullYear() + 1, now.getMonth() + 6, now.getDate()).toISOString().split('T')[0],
+        value: 1499.99,
+        currency: 'USD',
+        merchant: 'Dell',
+        account_number: 'SVC-789456',
+        auto_renew: false,
+        notify_days_before: 90,
+        priority: 8,
+        color: '#007db8',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'Refrigerator Warranty',
+        description: 'Home appliance warranty',
+        category: 'Warranty',
+        tags: [],
+        expiration_date: new Date(now.getFullYear() + 4, now.getMonth(), now.getDate()).toISOString().split('T')[0],
+        value: 899.00,
+        currency: 'USD',
+        merchant: 'Samsung',
+        account_number: 'MOD-2024-001',
+        auto_renew: false,
+        notify_days_before: 180,
+        priority: 6,
+        color: '#1428a0',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'Car Extended Warranty',
+        description: 'Vehicle service contract',
+        category: 'Warranty',
+        tags: [],
+        expiration_date: new Date(now.getFullYear() + 3, now.getMonth(), now.getDate()).toISOString().split('T')[0],
+        value: 25000.00,
+        currency: 'USD',
+        merchant: 'AutoCare Plus',
+        account_number: 'VIN-123456789',
+        auto_renew: false,
+        notify_days_before: 90,
+        priority: 10,
+        color: '#ff6600',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      
+      // Notes (4 items)
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'WiFi Password',
+        description: 'Home network: MyNetwork2024!',
+        category: 'Note',
+        tags: [],
+        expiration_date: null,
+        value: null,
+        currency: null,
+        merchant: null,
+        account_number: null,
+        auto_renew: false,
+        notify_days_before: 0,
+        priority: 7,
+        color: '#6366f1',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'Insurance Policy Numbers',
+        description: 'Health: POL-123456\nAuto: POL-789012\nHome: POL-345678',
+        category: 'Note',
+        tags: [],
+        expiration_date: null,
+        value: null,
+        currency: null,
+        merchant: null,
+        account_number: null,
+        auto_renew: false,
+        notify_days_before: 0,
+        priority: 9,
+        color: '#059669',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'Emergency Contacts',
+        description: 'Doctor: Dr. Smith - 555-0101\nVet: Animal Hospital - 555-0202\nPlumber: Fix-It Now - 555-0303',
+        category: 'Note',
+        tags: [],
+        expiration_date: null,
+        value: null,
+        currency: null,
+        merchant: null,
+        account_number: null,
+        auto_renew: false,
+        notify_days_before: 0,
+        priority: 10,
+        color: '#dc2626',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      },
+      {
+        id: generateUUID(),
+        user_id: userId,
+        name: 'Important Account Numbers',
+        description: 'Bank Account: ****5678\nCredit Card: ****9012\nSSN: ***-**-1234',
+        category: 'Note',
+        tags: [],
+        expiration_date: null,
+        value: null,
+        currency: null,
+        merchant: null,
+        account_number: null,
+        auto_renew: false,
+        notify_days_before: 0,
+        priority: 8,
+        color: '#7c3aed',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      }
+    ];
+    
+    const { error } = await client
+      .from('myday_items')
+      .insert(sampleItems);
+    
+    if (error) {
+      console.error('Error importing sample items:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error importing sample items:', error);
+    return false;
+  }
 };
 
 export const clearAllData = async (): Promise<void> => {

@@ -116,6 +116,28 @@ export interface EventAcknowledgment {
   acknowledgedAt: string; // ISO timestamp
 }
 
+export type ItemCategory = 'Gift Card' | 'Subscription' | 'Warranty' | 'Note';
+
+export interface Item {
+  id: string;
+  name: string;
+  description?: string;
+  category: ItemCategory;
+  tags?: string[]; // Array of tag IDs
+  expirationDate?: string; // YYYY-MM-DD - expiration date for gift cards, warranties, subscriptions
+  value?: number; // Balance/value for gift cards, cost for subscriptions
+  currency?: string; // Currency code (USD, EUR, etc.)
+  merchant?: string; // Store/merchant name for gift cards, service name for subscriptions
+  accountNumber?: string; // Account number, card number, etc.
+  autoRenew?: boolean; // For subscriptions
+  notifyDaysBefore?: number; // Show reminder N days before expiration
+  priority?: number; // 1-10, for sorting/filtering
+  color?: string;
+  isClosed?: boolean; // For gift cards - mark as used/closed
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface AppData {
   tasks: Task[];
   completions: TaskCompletion[];
@@ -125,5 +147,6 @@ export interface AppData {
   tags: Tag[];
   journalEntries: JournalEntry[];
   routines: Routine[];
+  items: Item[];
 }
 
