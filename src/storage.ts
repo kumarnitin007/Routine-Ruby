@@ -524,34 +524,68 @@ export const getItems = async (): Promise<Item[]> => {
 export const addItem = async (item: Item): Promise<void> => {
   const { client, userId } = await requireAuth();
 
+  // Build insert object with only relevant fields based on category
+  const insertData: any = {
+    id: item.id,
+    user_id: userId,
+    name: item.name,
+    description: item.description,
+    category: item.category,
+    tags: item.tags || [],
+    priority: item.priority || 5,
+    color: item.color,
+    is_closed: item.isClosed || false,
+    created_at: item.createdAt,
+    updated_at: item.updatedAt || item.createdAt
+  };
+
+  // Only add category-specific fields if not a Note
+  if (item.category !== 'Note') {
+    insertData.expiration_date = item.expirationDate || null;
+    insertData.notify_days_before = item.notifyDaysBefore || 0;
+  }
+
+  // Add value/currency for Gift Cards and Subscriptions
+  if (item.category === 'Gift Card' || item.category === 'Subscription') {
+    insertData.value = item.value || null;
+    insertData.currency = item.currency || 'USD';
+  }
+
+  // Add merchant for Gift Cards, Subscriptions, and Warranties
+  if (item.category === 'Gift Card' || item.category === 'Subscription' || item.category === 'Warranty') {
+    insertData.merchant = item.merchant || null;
+  }
+
+  // Add account number for Gift Cards
+  if (item.category === 'Gift Card') {
+    insertData.account_number = item.accountNumber || null;
+  }
+
+  // Add auto_renew for Subscriptions
+  if (item.category === 'Subscription') {
+    insertData.auto_renew = item.autoRenew || false;
+  }
+
+  // Add value for Warranties (purchase value)
+  if (item.category === 'Warranty') {
+    insertData.value = item.value || null;
+    insertData.currency = item.currency || 'USD';
+  }
+
   const { error } = await client
     .from('myday_items')
-    .insert([{
-      id: item.id,
-      user_id: userId,
-      name: item.name,
-      description: item.description,
-      category: item.category,
-      tags: item.tags || [],
-      expiration_date: item.expirationDate,
-      value: item.value,
-      currency: item.currency,
-      merchant: item.merchant,
-      account_number: item.accountNumber,
-      auto_renew: item.autoRenew || false,
-      notify_days_before: item.notifyDaysBefore || 0,
-      priority: item.priority || 5,
-      color: item.color,
-      is_closed: item.isClosed || false,
-      created_at: item.createdAt,
-      updated_at: item.updatedAt || item.createdAt
-    }]);
+    .insert([insertData]);
 
   if (error) throw error;
 };
 
 export const updateItem = async (itemId: string, updates: Partial<Item>): Promise<void> => {
   const { client } = await requireAuth();
+
+  // Get the current item to check its category
+  const items = await getItems();
+  const currentItem = items.find(item => item.id === itemId);
+  const category = updates.category || currentItem?.category || 'Note';
 
   const dbUpdates: any = {
     updated_at: new Date().toISOString()
@@ -561,16 +595,50 @@ export const updateItem = async (itemId: string, updates: Partial<Item>): Promis
   if (updates.description !== undefined) dbUpdates.description = updates.description;
   if (updates.category !== undefined) dbUpdates.category = updates.category;
   if (updates.tags !== undefined) dbUpdates.tags = updates.tags;
-  if (updates.expirationDate !== undefined) dbUpdates.expiration_date = updates.expirationDate;
-  if (updates.value !== undefined) dbUpdates.value = updates.value;
-  if (updates.currency !== undefined) dbUpdates.currency = updates.currency;
-  if (updates.merchant !== undefined) dbUpdates.merchant = updates.merchant;
-  if (updates.accountNumber !== undefined) dbUpdates.account_number = updates.accountNumber;
-  if (updates.autoRenew !== undefined) dbUpdates.auto_renew = updates.autoRenew;
-  if (updates.notifyDaysBefore !== undefined) dbUpdates.notify_days_before = updates.notifyDaysBefore;
   if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
   if (updates.color !== undefined) dbUpdates.color = updates.color;
   if (updates.isClosed !== undefined) dbUpdates.is_closed = updates.isClosed;
+
+  // Only update category-specific fields if not a Note
+  if (category !== 'Note') {
+    if (updates.expirationDate !== undefined) dbUpdates.expiration_date = updates.expirationDate;
+    if (updates.notifyDaysBefore !== undefined) dbUpdates.notify_days_before = updates.notifyDaysBefore;
+  } else {
+    // For Notes, explicitly set these to null if they exist
+    dbUpdates.expiration_date = null;
+    dbUpdates.notify_days_before = 0;
+  }
+
+  // Update value/currency for Gift Cards, Subscriptions, and Warranties
+  if (category === 'Gift Card' || category === 'Subscription' || category === 'Warranty') {
+    if (updates.value !== undefined) dbUpdates.value = updates.value;
+    if (updates.currency !== undefined) dbUpdates.currency = updates.currency;
+  } else if (category === 'Note') {
+    // For Notes, set these to null
+    dbUpdates.value = null;
+    dbUpdates.currency = null;
+  }
+
+  // Update merchant for Gift Cards, Subscriptions, and Warranties
+  if (category === 'Gift Card' || category === 'Subscription' || category === 'Warranty') {
+    if (updates.merchant !== undefined) dbUpdates.merchant = updates.merchant;
+  } else if (category === 'Note') {
+    dbUpdates.merchant = null;
+  }
+
+  // Update account number for Gift Cards
+  if (category === 'Gift Card') {
+    if (updates.accountNumber !== undefined) dbUpdates.account_number = updates.accountNumber;
+  } else if (category === 'Note') {
+    dbUpdates.account_number = null;
+  }
+
+  // Update auto_renew for Subscriptions
+  if (category === 'Subscription') {
+    if (updates.autoRenew !== undefined) dbUpdates.auto_renew = updates.autoRenew;
+  } else if (category === 'Note') {
+    dbUpdates.auto_renew = false;
+  }
 
   const { error } = await client
     .from('myday_items')
