@@ -36,7 +36,7 @@ import AuthModal from './components/AuthModal';
 import { isFirstTimeUser, markOnboardingComplete } from './storage';
 import { loadSampleTasks } from './utils/sampleData';
 
-type View = 'today' | 'tasks-events' | 'journal' | 'analytics' | 'settings';
+type View = 'today' | 'tasks-events' | 'items' | 'journal' | 'analytics' | 'settings';
 
 /**
  * Main App Content Component
